@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bg="aurora">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f2f3f0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#080a0d" media="(prefers-color-scheme: dark)">
+  <meta name="description" id="metaDescription" content="按需点选，即时生成餐边柜单柜与组合柜标准 SKU 清单。">
+  <title>餐边柜 SKU Studio · 标准 SKU 生成器</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip-link" id="skipLink" href="#wizard">跳到主要内容</a>
+
+  <div class="ambient" aria-hidden="true">
+    <span class="orb orb--one"></span>
+    <span class="orb orb--two"></span>
+    <span class="orb orb--three"></span>
+    <span class="ambient__grain"></span>
+  </div>
+
+  <div class="app-shell">
+    <header class="site-header glass" id="siteHeader">
+      <div class="site-header__inner">
+        <div class="brand">
+          <span class="brand__mark" id="brandMark" aria-hidden="true">柜</span>
+          <span class="brand__copy">
+            <span class="brand__name" id="brandName">餐边柜 SKU Studio</span>
+            <span class="brand__tagline" id="brandTagline">SKU WORKSPACE</span>
+          </span>
+        </div>
+
+        <div class="header-actions">
+          <button class="nav-button" id="announcementButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+              <path d="M10 21h4"></path>
+            </svg>
+            <span class="nav-button__label" id="announcementLabel">公告</span>
+            <span class="nav-button__dot" id="noticeDot" hidden></span>
+          </button>
+
+          <button class="nav-button" id="helpButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M9.6 9a2.5 2.5 0 1 1 3.9 2.1c-.9.6-1.5 1.1-1.5 2.4"></path>
+              <path d="M12 17h.01"></path>
+            </svg>
+            <span class="nav-button__label" id="helpLabel">使用说明</span>
+          </button>
+
+          <button class="icon-button" id="themeToggle" type="button">
+            <span class="theme-glyph" aria-hidden="true">
+              <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"></path>
+              </svg>
+              <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.4 14.4A8.5 8.5 0 0 1 9.6 3.6 8.5 8.5 0 1 0 20.4 14.4Z"></path>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="notice-slot" id="noticeSlot"></div>
+
+    <main class="app-layout" id="main">
+      <aside class="sidebar">
+        <section class="hero">
+          <p class="eyebrow" id="heroEyebrow">CABINET / SKU</p>
+          <h1 class="hero__title" id="heroTitle">把复杂的 SKU，变成几次点选。</h1>
+          <p class="hero__subtitle" id="heroSubtitle"></p>
+          <div class="hero-metrics" id="heroMetrics"></div>
+        </section>
+
+        <section class="mode-panel mode-panel--mobile glass-soft">
+          <div class="segmented" id="modeSwitch" data-mode-switch role="tablist" aria-label="生成模式"></div>
+          <p class="mode-panel__caption" id="modeCaption"></p>
+        </section>
+
+        <nav class="steps-panel" id="stepsPanel" aria-label="生成步骤">
+          <div class="steps-panel__head">
+            <span class="steps-panel__label" id="progressLabel">PROGRESS</span>
+            <span class="steps-panel__count" id="stepCount"></span>
+          </div>
+          <div class="steps" id="steps"></div>
+        </nav>
+      </aside>
+
+      <section class="workspace">
+        <div class="workbench glass">
+          <section class="mode-panel mode-panel--desktop">
+            <div class="segmented" id="modeSwitchDesktop" data-mode-switch role="tablist" aria-label="生成模式"></div>
+            <p class="mode-panel__caption" id="modeCaptionDesktop"></p>
+          </section>
+          <section class="summary" id="summaryPanel" aria-live="polite"></section>
+        </div>
+
+        <article class="wizard glass" id="wizard" aria-labelledby="stepTitle">
+          <div class="wizard__progress" aria-hidden="true">
+            <span class="wizard__progress-fill" id="progressFill"></span>
+          </div>
+
+          <header class="wizard__header">
+            <div class="wizard__heading">
+              <p class="step-kicker" id="stepKicker"></p>
+              <h2 class="wizard__title" id="stepTitle"></h2>
+              <p class="wizard__hint" id="stepHint"></p>
+            </div>
+            <div class="step-tools" id="stepTools"></div>
+          </header>
+
+          <div class="step-content" id="mainContent"></div>
+          <footer class="wizard__footer" id="wizardFooter"></footer>
+        </article>
+      </section>
+    </main>
+
+    <footer class="page-footer" id="pageFooter"></footer>
+  </div>
+
+  <div class="picker-layer" id="pickerLayer" aria-hidden="true"></div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m5 12 4 4L19 6"></path>
+      </svg>
+    </span>
+    <span class="toast__text" id="toastText"></span>
+  </div>
+
+  <div class="modal-layer" id="modalLayer" aria-hidden="true"></div>
+
+  <script src="js/catalog.js" defer></script>
+  <script src="js/site-config.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>

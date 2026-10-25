@@ -1,0 +1,16 @@
+{
+  "name": "canbian-gui-sku-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "餐边柜 SKU Studio · 单柜与组合柜 SKU 清单生成器，含本地可视化编辑器",
+  "scripts": {
+    "start": "node server/server.js --open",
+    "editor": "node server/server.js --open",
+    "serve": "node server/server.js --no-open",
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

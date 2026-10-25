@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>餐边柜 SKU列表生成器</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:#f5f7fb;color:#1f2937;font-size:14px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app{max-width:980px;margin:0 auto;padding:24px 20px 70px}
+  .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .top-left h1{font-size:22px;margin:0 0 6px; font-weight:700; color:#111827}
+  .top-left .sub{margin:0;color:#6b7280;font-size:13.5px}
+  .btn-edit-data {
+    background: #fff; border: 1px solid #e3e8f0; padding: 8px 16px;
+    border-radius: 8px; font-size: 13px; color: #374151; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; font-weight: 500;
+  }
+  .btn-edit-data:hover { border-color: #2f6fed; color: #2f6fed; background: #f5f9ff; }
+  
+  /* 模式切换 Tabs */
+  .mode-tabs { display: flex; gap: 10px; margin-bottom: 24px; }
+  .mode-tab {
+    padding: 8px 24px; border-radius: 8px; background: #fff;
+    border: 1px solid #e3e8f0; font-size: 14px; font-weight: 600;
+    color: #6b7280; cursor: pointer; transition: all 0.2s;
+  }
+  .mode-tab.active {
+    background: #2f6fed; color: #fff; border-color: #2f6fed;
+    box-shadow: 0 4px 12px rgba(47,111,237,0.2);
+  }
+
+  .steps{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .step{
+    display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;
+    background:#fff;border:1px solid #e3e8f0;font-size:13px;color:#6b7280;
+    cursor:pointer;user-select:none;
+  }
+  .step:hover:not(.active) { border-color:#b9c8e6; color:#2f6fed; }
+  .step .num{
+    width:18px;height:18px;border-radius:50%;background:#eef2f7;
+    display:flex;align-items:center;justify-content:center;font-size:11px;
+  }
+  .step.done{background:#eaf1ff;border-color:#b9c8e6;color:#2f6fed}
+  .step.done .num{background:#2f6fed;color:#fff}
+  .step.active{background:#2f6fed;border-color:#2f6fed;color:#fff;font-weight:600; box-shadow:0 4px 12px rgba(47,111,237,0.2)}
+  .step.active .num{background:rgba(255,255,255,.25)}
+  
+  .summary{
+    background:#fff;border:1px solid #e3e8f0;border-radius:12px;
+    padding:12px 16px;margin-bottom:16px;font-size:13px;color:#6b7280;
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;min-height:46px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.02);
+  }
+  .summary .cond{background:#f0f5ff;color:#2f6fed;padding:4px 12px;border-radius:16px;cursor:pointer; border:1px solid transparent;}
+  .summary .cond:hover{background:#e0ebff; border-color:#b9c8e6;}
+  .summary .empty{color:#9ca3af}
+  
+  main{
+    background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:24px;min-height:360px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    box-shadow:0 4px 20px rgba(0,0,0,0.03);
+  }
+  
+  .step-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid #eef2f7; padding-bottom: 16px; }
+  .hint{color:#6b7280;font-size:13.5px;margin:0;line-height:1.6}
+  
+  .series-group {
+    border: 1px solid #e3e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+    background: #fafbfc;
+  }
+  
+  .series-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; border-bottom: 1px dashed #d1d9e6; padding-bottom: 12px;
+  }
+  .series-head h3 {
+    font-size: 15px; margin: 0; color: #1f2937;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .series-head h3::before {
+    content: ''; display: inline-block; width: 4px; height: 16px; background: #2f6fed; border-radius: 2px;
+  }
+  
+  .mini-btns { display: flex; gap: 8px; }
+  .mini-btns button { 
+    border: 1px solid #2f6fed; background: #f5f9ff; padding: 6px 14px; border-radius: 6px; 
+    font-size: 13px; font-weight: 600; cursor: pointer; color: #2f6fed;
+  }
+  .mini-btns button:hover { background: #e0ebff; }
+
+  /* 批量复制按钮特殊样式 */
+  .btn-batch-copy {
+    border: 1px solid #10b981 !important; background: #ecfdf5 !important; color: #059669 !important;
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-batch-copy:hover:not(:disabled) { background: #d1fae5 !important; }
+  .btn-batch-copy:disabled {
+    border-color: #e5e7eb !important; background: #f3f4f6 !important; color: #9ca3af !important;
+    cursor: not-allowed; box-shadow: none;
+  }
+
+  .opt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .opt{
+    border:1.5px solid #e3e8f0;border-radius:10px;padding:14px 12px;
+    cursor:pointer;background:#fff;text-align:left;user-select:none;
+  }
+  .opt:hover{border-color:#b9c8e6; box-shadow: 0 2px 6px rgba(0,0,0,0.02);}
+  .opt.on{border-color:#2f6fed;background:#f5f9ff;box-shadow:0 0 0 2px rgba(47,111,237,.1)}
+  .opt .t{font-weight:600;font-size:14px;margin-bottom:4px;line-height:1.4;}
+  .opt.on .t { color: #2f6fed; }
+  .opt .d{font-size:12.5px;color:#6b7280;line-height:1.5}
+  .opt .tag{
+    display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;
+    background:#fff4e0;color:#f59e0b;border:1px solid #ffe0b0;margin-left:6px;font-weight:400;
+  }
+
+  /* 组合柜下拉选择样式 */
+  .combo-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    padding: 14px; background: #fff; border: 1px solid #e3e8f0; border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .combo-row:hover { border-color: #b9c8e6; }
+  
+  /* 重复组合高亮 */
+  .combo-row.is-duplicate {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+  }
+  .combo-row.is-duplicate .combo-label {
+    color: #dc2626;
+  }
+  
+  .combo-label {
+    font-weight: 700; color: #ef4444; font-size: 14px; white-space: nowrap;
+  }
+  .combo-plus { color: #9ca3af; font-weight: bold; }
+  
+  .btn-add-inner {
+    padding: 8px 14px; background: #fff; border: 1px dashed #2f6fed;
+    color: #2f6fed; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-add-inner:hover { background: #f5f9ff; }
+  
+  .btn-copy-combo {
+    padding: 8px 14px; background: #fff; border: 1px solid #d1d5db;
+    color: #374151; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-copy-combo:hover { background: #f3f4f6; border-color: #9ca3af; }
+
+  .btn-del-combo-group {
+    padding: 8px 14px; background: #fff; border: 1px solid #fecaca; 
+    color: #ef4444; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-del-combo-group:hover { background: #fef2f2; border-color: #ef4444; }
+
+  /* ===== 自定义折叠下拉框样式 ===== */
+  .custom-select-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 160px;
+  }
+  .custom-select-display {
+    padding: 10px 14px; border-radius: 8px; border: 1px solid #d1d5db;
+    font-size: 13.5px; color: #1f2937; background: #fff; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    user-select: none; transition: border-color 0.2s;
+  }
+  .custom-select-display:hover { border-color: #2f6fed; }
+  .custom-select-display .arrow { font-size: 10px; color: #9ca3af; }
+  
+  .custom-select-panel {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: #fff; border: 1px solid #e3e8f0; border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 100; max-height: 250px; overflow-y: auto;
+    margin-top: 4px;
+  }
+  .custom-group { border-bottom: 1px solid #f1f5f9; }
+  .custom-group:last-child { border-bottom: none; }
+  .custom-group-title {
+    padding: 10px 14px; font-weight: 600; background: #f8fafc; color: #374151;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    user-select: none;
+  }
+  .custom-group-title:hover { background: #f1f5f9; }
+  .custom-group-list { display: none; }
+  .custom-option {
+    padding: 8px 14px 8px 28px; font-size: 13px; color: #4b5563; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .custom-option:hover { background: #f0f5ff; color: #2f6fed; }
+  .custom-option.selected { background: #e0ebff; color: #2f6fed; font-weight: 600; }
+
+  .bar{display:flex;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid #eef2f7}
+  .bar button{
+    border:1px solid #e3e8f0;background:#fff;padding:10px 24px;
+    border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;
+  }
+  .bar button:hover:not(:disabled){border-color:#2f6fed;color:#2f6fed; background:#f5f9ff;}
+  .bar button.primary{background:#2f6fed;border-color:#2f6fed;color:#fff; box-shadow:0 4px 12px rgba(47,111,237,0.15);}
+  .bar button.primary:hover:not(:disabled){opacity:.9;color:#fff;}
+  .bar button:disabled{opacity:.4;cursor:not-allowed; background:#f3f4f6; border-color:#e5e7eb; color:#9ca3af; box-shadow:none;}
+  
+  .res-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+  .res-stat{background:#f8fafc;border-radius:12px;padding:16px; border:1px solid #eef2f7;}
+  .res-stat b{display:block;font-size:26px;color:#2f6fed;line-height:1.1; margin-bottom:4px;}
+  .res-stat span{font-size:13px;color:#6b7280; font-weight:500;}
+  
+  .tabs{display:flex;gap:10px;margin-bottom:16px; align-items: center;}
+  .tab.active{
+    background:#2f6fed;border-color:#2f6fed;color:#fff; box-shadow:0 2px 8px rgba(47,111,237,0.2);
+    border:1px solid #2f6fed; padding:8px 16px; border-radius:8px; font-size:13.5px; font-weight:500;
+  }
+  
+  /* 列表内区块样式 */
+  .list{max-height:450px;overflow-y:auto;border:1px solid #eef2f7;border-radius:10px; background:#fff;}
+  
+  .sku-series-title {
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 15px;
+    background: #f8fafc;
+    color: #1f2937;
+    border-top: 1px solid #eef2f7;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .sku-series-title:first-child { border-top: none; }
+  
+  .sku-spec-line {
+    padding: 6px 16px 6px 24px;
+    font-size: 13.5px;
+    font-family: ui-monospace,Menlo,Consolas,monospace;
+    color: #374151;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .sku-spec-line .prefix {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .sku-spec-line .prefix.stand { background: #e0f2fe; color: #0284c7; }
+  .sku-spec-line .prefix.floor { background: #fdf4ff; color: #c026d3; }
+  
+  .sku-spec-line .dim { font-weight: 600; color: #111827; }
+  .sku-spec-line .txt { color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 12.5px; }
+  .sku-spec-line .warn{color:#f59e0b;font-size:11px;margin-left:8px;font-family:inherit; background:#fff4e0; padding:1px 6px; border-radius:4px;}
+
+  .toast{
+    position:fixed;left:50%;bottom:40px;transform:translateX(-50%);
+    background:#1f2937;color:#fff;padding:12px 24px;border-radius:10px;
+    font-size:14px;opacity:0;visibility:hidden;z-index:99;
+    box-shadow:0 10px 25px rgba(0,0,0,0.1);
+  }
+  .toast.show{opacity:1; visibility:visible;}
+  
+  /* ===== 弹窗通用样式 ===== */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(17, 24, 39, 0.4);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; 
+  }
+  .modal-overlay.show { display: flex; }
+  
+  .modal-content {
+    background: #fff; border-radius: 16px; width: 90%; max-width: 420px;
+    padding: 32px 24px; text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    position: relative;
+  }
+  
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: #9ca3af;
+    font-size: 24px; cursor: pointer; border-radius: 50%;
+  }
+  .modal-close:hover { background: #f3f4f6; color: #374151; }
+  
+  .modal-icon {
+    width: 56px; height: 56px; background: #ecfdf5; color: #10b981;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 20px;
+  }
+  .modal-content h2 { margin: 0 0 10px; font-size: 20px; color: #111827; }
+  .modal-content p { margin: 0 0 28px; font-size: 14px; color: #6b7280; line-height: 1.6; }
+  
+  .modal-actions { display: flex; flex-direction: column; gap: 12px; }
+  .modal-actions button {
+    width: 100%; padding: 12px 20px; border-radius: 10px; font-size: 14.5px;
+    font-weight: 600; cursor: pointer; border: none;
+  }
+  .btn-cancel { background: #f3f4f6; color: #374151; }
+  .btn-cancel:hover { background: #e5e7eb; color: #111827; }
+  .btn-primary { background: #2f6fed; color: #fff; box-shadow: 0 4px 12px rgba(47,111,237,0.2); }
+  .btn-primary:hover { background: #2563eb; }
+
+  /* ===== 类目编辑器专用弹窗样式 ===== */
+  .editor-content {
+    background: #fff; border-radius: 12px; width: 95%; max-width: 850px;
+    display: flex; flex-direction: column; height: 85vh;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  .editor-header {
+    padding: 16px 24px; border-bottom: 1px solid #e3e8f0;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f8fafc; border-radius: 12px 12px 0 0;
+  }
+  .editor-header h2 { margin: 0; font-size: 18px; color: #111827; }
+  .editor-header-actions { display: flex; gap: 10px; align-items: center; }
+  .editor-header-actions button {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid #e3e8f0; background:#fff;
+  }
+  .editor-header-actions button:hover { border-color: #2f6fed; color: #2f6fed; }
+  .editor-header-actions button.primary { background: #2f6fed; color: #fff; border-color: #2f6fed; }
+  .editor-header-actions button.primary:hover { opacity: 0.9; color: #fff; }
+  
+  .editor-body {
+    flex: 1; overflow-y: auto; position: relative; padding: 16px 24px;
+    background: #f5f7fb;
+  }
+
+  /* 树形折叠结构 */
+  .tree-node { margin-bottom: 8px; }
+  .tree-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; padding: 10px 14px; border-radius: 8px; cursor: pointer;
+    border: 1px solid #e3e8f0; font-weight: 600; color: #1f2937; font-size: 14px;
+  }
+  .tree-header:hover { border-color: #b9c8e6; }
+  .tree-header .title { display: flex; align-items: center; gap: 8px; }
+  .tree-header .arrow { font-size: 10px; transition: transform 0.2s; color: #9ca3af; display: inline-block; }
+  .tree-header.open .arrow { transform: rotate(90deg); }
+  
+  .tree-actions { display: flex; gap: 6px; }
+  .tree-actions button {
+    padding: 2px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;
+    border: 1px solid #e3e8f0; background: #fff; color: #6b7280;
+  }
+  .tree-actions button:hover { border-color: #2f6fed; color: #2f6fed; }
+  .tree-actions button.del { color: #ef4444; border-color: #fecaca; }
+  .tree-actions button.del:hover { background: #fef2f2; border-color: #ef4444; }
+
+  .tree-children {
+    display: none; padding-left: 20px; margin-top: 6px;
+    border-left: 1px dashed #cbd5e1; margin-left: 16px;
+  }
+  .tree-children.open { display: block; }
+  
+  /* 叶子节点输入框样式优化 */
+  .leaf-node {
+    background: #fff; border: 1px solid #e3e8f0; border-radius: 6px;
+    padding: 12px 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  }
+  .leaf-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; }
+  .leaf-node input[type="text"], .leaf-node input[type="number"] {
+    padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px;
+    font-size: 13px; outline: none; transition: border-color 0.2s; color: #1f2937;
+  }
+  .leaf-node input:focus { border-color: #2f6fed; box-shadow: 0 0 0 2px rgba(47,111,237,0.1); }
+  .leaf-node input.height-in { width: 85px; }
+  .leaf-node input.width-in { width: 60px; }
+  .leaf-node input.depth-in { width: 60px; }
+  .leaf-node input.flag-in { width: 100px; }
+  
+  .cb-group { display: flex; gap: 8px; align-items: center; }
+  .cb-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; color: #374151; }
+  .cb-group input[type="checkbox"] { accent-color: #2f6fed; width: 14px; height: 14px; cursor: pointer; }
+  
+  .leaf-node button.del {
+    margin-left: auto; padding: 4px 10px; border-radius: 4px; font-size: 12px;
+    cursor: pointer; border: 1px solid #fecaca; background: #fff; color: #ef4444;
+  }
+  .leaf-node button.del:hover { background: #fef2f2; border-color: #ef4444; }
+
+  @media(max-width:600px){
+    .res-stats{grid-template-columns:1fr}
+    #app{padding:16px 12px 60px}
+    .modal-content { padding: 24px 20px; }
+    .top { flex-direction: column; gap: 12px; }
+    .leaf-node { flex-direction: column; align-items: flex-start; }
+    .leaf-group { flex-wrap: wrap; }
+    .combo-row { flex-direction: column; align-items: stretch; }
+    .custom-select-wrap { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="top-left">
+      <h1>餐边柜 SKU列表生成器</h1>
+      <p class="sub">按需点选，生成标准sku列表</p>
+    </div>
+    <button class="btn-edit-data" id="btnOpenEditor">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      编辑类目数据
+    </button>
+  </header>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="single">单柜 SKU</button>
+    <button class="mode-tab" data-mode="combo">组合柜 SKU</button>
+  </div>
+
+  <nav class="steps" id="steps"></nav>
+  <div class="summary" id="summary"></div>
+  
+  <main>
+    <div id="main-content"></div>
+    <div id="footer"></div>
+  </main>
+  
+  <div class="toast" id="toast"></div>
+</div>
+
+<!-- 复制成功弹窗 -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal-content">
+    <button class="modal-close" id="btnCloseModal">×</button>
+    <div class="modal-icon">✓</div>
+    <h2>复制成功</h2>
+    <p>SKU 信息已复制到剪贴板，<br>可以点击下方提交任务按钮跳转</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnContinue">继续生成</button>
+      <button class="btn-primary" id="btnSubmit">去提交作图任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- 类目编辑器弹窗 -->
+<div class="modal-overlay" id="editorModal">
+  <div class="editor-content">
+    <div class="editor-header">
+      <h2>编辑类目数据（折叠树）</h2>
+      <div class="editor-header-actions">
+        <span style="font-size: 12.5px; color: #6b7280; margin-right: 8px;">修改后点击保存，会自动更新代码并刷新</span>
+        <button id="btnAddSeries">+ 添加系列</button>
+        <button class="primary" id="btnSaveData">保存并更新代码</button>
+        <button class="modal-close" style="position:static; width:auto; height:auto; font-size:20px;" id="btnCloseEditor">×</button>
+      </div>
+    </div>
+    <div class="editor-body" id="editorTree">
+      <!-- 树形结构生成在此 -->
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 数据定义与初始化 ================= */
+const DEFAULT_RAW = [
+  ['常规系列','单开圆门','1020/870',424,350,'黑白',''],
+  ['常规系列','单开铁门','1020/870',424,350,'黑白',''],
+  ['常规系列','立三门','1020/870',424,350,'黑白',''],
+  ['常规系列','对开圆门','1020/870',600,350,'黑白绿',''],
+  ['常规系列','对开拱门','1020/870',600,350,'黑白绿',''],
+  ['常规系列','对开铁门','1020/870',600,350,'黑白绿',''],
+  ['常规系列','对开圆门','1020/870',800,350,'黑白绿',''],
+  ['常规系列','对开拱门','1020/870',800,350,'黑白绿',''],
+  ['常规系列','对开铁门','1020/870',800,350,'黑白绿',''],
+  ['常规系列','对开圆门','1020/870',1000,350,'黑白绿',''],
+  ['常规系列','对开拱门','1020/870',1000,350,'黑白绿',''],
+  ['常规系列','对开铁门','1020/870',1000,350,'黑白绿',''],
+  ['常规系列','对开圆门','1320/1170',600,350,'黑白',''],
+  ['常规系列','对开铁门','1320/1170',600,350,'黑白',''],
+  ['常规系列','对开圆门','1320/1170',800,350,'黑白',''],
+  ['常规系列','对开铁门','1320/1170',800,350,'黑白',''],
+  ['常规系列','对开圆门','1320/1170',1000,350,'黑白',''],
+  ['常规系列','对开铁门','1320/1170',1000,350,'黑白',''],
+  ['常规系列','二斗对开铁门','1020/870',800,350,'黑白',''],
+  ['常规系列','二斗对开圆门','1020/870',800,350,'黑白',''],
+  ['常规系列','二斗对开铁门','1200/1050',800,350,'黑白',''],
+  ['常规系列','二斗对开圆门','1200/1050',800,350,'黑白',''],
+  ['常规系列','二斗对开拱门','1200/1050',800,350,'黑白',''],
+  ['常规系列','三开圆门','1020/870',1176,350,'黑白',''],
+  ['常规系列','三开铁门','1020/870',1176,350,'黑白',''],
+  ['常规系列','三斗三开圆门','1200/1050',1176,350,'黑白',''],
+  ['常规系列','三斗三开铁门','1200/1050',1176,350,'黑白',''],
+  ['常规系列','三斗三开拱门','1200/1050',1176,350,'黑白',''],
+  ['常规系列','四开铁门','1020/870',1400,350,'黑白',''],
+  ['梅花系列','单门梅花','1020/870',424,350,'黑白',''],
+  ['梅花系列','二门梅花','1020/870',600,350,'黑白绿',''],
+  ['梅花系列','二门梅花','1020/870',800,350,'黑白绿',''],
+  ['梅花系列','二门梅花','1020/870',1000,350,'黑白绿',''],
+  ['梅花系列','二门梅花','1320/1170',600,350,'黑白',''],
+  ['梅花系列','二门梅花','1320/1170',800,350,'黑白',''],
+  ['梅花系列','二门梅花','1320/1170',1000,350,'黑白',''],
+  ['梅花系列','二斗二门梅花','1020/870',800,350,'黑白',''],
+  ['梅花系列','二斗二门梅花','1200/1050',800,350,'黑白',''],
+  ['梅花系列','三门梅花','1020/870',1176,350,'黑白',''],
+  ['梅花系列','三斗三门梅花','1200/1050',1176,350,'黑白',''],
+  ['梅花系列','四门梅花','1020/870',1400,350,'黑白',''],
+  ['藤编系列','单门藤编','1020/870',424,350,'黑白',''],
+  ['藤编系列','二门藤编','1020/870',600,350,'黑白',''],
+  ['藤编系列','二门藤编','1020/870',800,350,'黑白',''],
+  ['藤编系列','二门藤编','1020/870',1000,350,'黑白',''],
+  ['藤编系列','二门藤编','1320/1170',600,350,'黑白',''],
+  ['藤编系列','二门藤编','1320/1170',800,350,'黑白',''],
+  ['藤编系列','二门藤编','1320/1170',1000,350,'黑白',''],
+  ['藤编系列','二斗二门藤编','1020/870',800,350,'黑白',''],
+  ['藤编系列','二斗二门藤编','1200/1050',800,350,'黑白',''],
+  ['藤编系列','三门藤编','1020/870',1176,350,'黑白',''],
+  ['藤编系列','三斗三门藤编','1200/1050',1176,350,'黑白',''],
+  ['藤编系列','四门藤编','1020/870',1400,350,'黑白',''],
+  ['格栅系列','单门格栅','1020/870',424,350,'黑白',''],
+  ['格栅系列','二门格栅','1020/870',600,350,'黑白',''],
+  ['格栅系列','二门格栅','1020/870',800,350,'黑白',''],
+  ['格栅系列','二门格栅','1020/870',1000,350,'黑白',''],
+  ['格栅系列','二门格栅','1320/1170',600,350,'黑白',''],
+  ['格栅系列','二门格栅','1320/1170',800,350,'黑白',''],
+  ['格栅系列','二门格栅','1320/1170',1000,350,'黑白',''],
+  ['格栅系列','二斗二门格栅','1200/1050',800,350,'黑白',''],
+  ['格栅系列','三门格栅','1020/870',1176,350,'黑白',''],
+  ['格栅系列','三斗三门格栅','1200/1050',1176,350,'黑白',''],
+  ['格栅系列','四门格栅','1020/870',1400,350,'黑白',''],
+  ['方压型系列','二门方压型','1020/870',800,350,'黑白',''],
+  ['方压型系列','二门方压型','1020/870',1000,350,'黑白',''],
+  ['方压型系列','二斗二门方压型','1200/1050',800,350,'黑白',''],
+  ['方压型系列','三门方压型','1020/870',1176,350,'黑白',''],
+  ['方压型系列','三斗三门方压型','1200/1050',1176,350,'黑白',''],
+  ['方压型系列','四门方压型','1020/870',1400,350,'黑白',''],
+  ['拱压型系列','二门拱压型','1020/870',800,350,'黑白',''],
+  ['拱压型系列','二门拱压型','1020/870',1000,350,'黑白',''],
+  ['拱压型系列','二门二斗拱压型','1200/1050',800,350,'黑白',''],
+  ['拱压型系列','三门拱压型','1020/870',1176,350,'黑白',''],
+  ['拱压型系列','三门三斗拱压型','1200/1050',1176,350,'黑白',''],
+  ['拱压型系列','四门拱压型','1020/870',1400,350,'黑白',''],
+  ['鹅颈门系列','二门鹅颈','1020/870',600,350,'黑白绿',''],
+  ['鹅颈门系列','二门鹅颈','1020/870',800,350,'黑白绿',''],
+  ['鹅颈门系列','二门鹅颈','1020/870',1000,350,'黑白绿',''],
+  ['鹅颈门系列','二门鹅颈','1320/1170',600,350,'黑白','待补价'],
+  ['鹅颈门系列','二门鹅颈','1320/1170',800,350,'黑白','待补价'],
+  ['鹅颈门系列','二门鹅颈','1320/1170',1000,350,'黑白','待补价'],
+  ['鹅颈门系列','二门二斗鹅颈','1200/1050',800,350,'黑白',''],
+  ['鹅颈门系列','三门鹅颈','1020/870',1176,350,'黑白',''],
+  ['鹅颈门系列','三斗三门鹅颈','1200/1050',1176,350,'黑白',''],
+  ['鹅颈门系列','四门鹅颈','1020/870',1400,350,'黑白',''],
+];
+
+let RAW = [];
+
+function loadData() {
+  RAW = JSON.parse(JSON.stringify(DEFAULT_RAW));
+  localStorage.removeItem('sku_generator_raw_data_v2');
+  localStorage.removeItem('sku_generator_raw_data_v1');
+}
+loadData();
+
+/* ================= 基础配置 ================= */
+const COLOR_NAME = {'黑':'黑色','白':'白色','绿':'绿色'};
+const STYLE_NAME = {1020:'站脚款',870:'落地款',1320:'站脚款',1170:'落地款',1200:'站脚款',1050:'落地款'};
+
+let DATA = [];
+let SERIES = [];
+
+let mode = 'single'; // 'single' | 'combo'
+let step = 0;
+
+const sel = {
+  series: new Set(),
+  models: new Set(),
+  widths: new Set(),
+  styles: new Set(),
+  colors: new Set(),
+  layers: new Set(),
+};
+let comboConfigs = {}; 
+
+function heightsOf(hg){
+  const parts = hg.split('/').map(Number);
+  if (parts.length === 2) {
+    return [
+      {h:parts[0], label:STYLE_NAME[parts[0]] || '站脚款', desc:'有柜腿，含腿总高 '+parts[0]+'mm'},
+      {h:parts[1], label:STYLE_NAME[parts[1]] || '落地款', desc:'落地款，总高 '+parts[1]+'mm'}
+    ];
+  } else {
+    const h = parts[0];
+    const isFloor = h <= 870;
+    return [
+      {h: h, label: isFloor ? '落地款' : '站脚款', desc: isFloor ? '落地款，总高 '+h+'mm' : '有柜腿，含腿总高 '+h+'mm'}
+    ];
+  }
+}
+
+function layersOf(hg){
+  return Number(hg.split('/')[0]) === 1320 ? [4,5] : [3,4,5];
+}
+
+// 解析组合项的辅助函数
+function parseComboItem(v, defaultSeries) {
+  const parts = v.split('|');
+  if (parts.length === 3) {
+    return { series: parts[0], m: parts[1], w: Number(parts[2]) };
+  }
+  return { series: defaultSeries, m: parts[0], w: Number(parts[1]) };
+}
+
+/* ================= 核心逻辑 ================= */
+function initApp() {
+  DATA = RAW.map(([s,m,hg,w,d,cs,flag])=>({
+    s, m, hg, w: Number(w), d: Number(d) || 350, c: cs.split(''), flag:flag||''
+  }));
+  SERIES = [...new Set(DATA.map(r=>r.s))];
+  
+  resetAll();
+}
+
+function resetAll() {
+  Object.keys(sel).forEach(k=>sel[k].clear());
+  comboConfigs = {};
+  step = 0;
+  render();
+}
+
+// 获取组合状态，包含所有有效组合及重复的签名
+function getComboStatus() {
+  const validGroups = [];
+  for (const s of sel.series) {
+    const groups = comboConfigs[s] || [];
+    groups.forEach((g, gIdx) => {
+      const validItems = g.items.filter(v => v);
+      if (validItems.length >= 2) {
+        const key = [...validItems].sort().join('+');
+        validGroups.push({ s, gIdx, key, validItems });
+      }
+    });
+  }
+  
+  const countMap = {};
+  validGroups.forEach(vg => {
+    countMap[vg.key] = (countMap[vg.key] || 0) + 1;
+  });
+  
+  const duplicateKeys = new Set(Object.keys(countMap).filter(k => countMap[k] > 1));
+  return { validGroups, duplicateKeys };
+}
+
+function isStepReady(i){
+  if (mode === 'single') {
+    if(i === 0) return true;
+    if(i === 1) return sel.series.size > 0;
+    if(i === 2) return sel.models.size > 0;
+    if(i === 3) return sel.widths.size > 0;
+    if(i === 4) return sel.styles.size > 0;
+    if(i === 5) return sel.colors.size > 0;
+    if(i === 6) return sel.layers.size > 0;
+  } else {
+    const { validGroups, duplicateKeys } = getComboStatus();
+    if(i === 0) return true;
+    if(i === 1) {
+      if (validGroups.length === 0) return false;
+      if (duplicateKeys.size > 0) return false;
+      return true;
+    }
+    if(i === 2) return sel.styles.size > 0;
+    if(i === 3) return sel.colors.size > 0;
+    if(i === 4) return sel.layers.size > 0;
+  }
+  return false;
+}
+
+function getComboMeta() {
+  const layers = [...sel.layers].filter(k => k.startsWith('combo|')).map(k => k.split('|')[1]).sort((a,b)=>a-b);
+  const colors = [...sel.colors].filter(k => k.startsWith('combo|')).map(k => k.split('|')[1]).sort((a,b)=>{
+    const order = {'黑':1, '白':2, '绿':3};
+    return (order[a]||99) - (order[b]||99);
+  }).map(c => COLOR_NAME[c] || c);
+  return { layers, colors };
+}
+
+function generateSkus(){
+  const skus = [];
+  if (mode === 'single') {
+    DATA.forEach(r => {
+      if (!sel.series.has(r.s)) return;
+      if (!sel.models.has(r.s + '|' + r.m)) return;
+      if (!sel.widths.has(r.s + '|' + r.w)) return;
+      
+      const hs = heightsOf(r.hg).filter(o => sel.styles.has(r.s + '|' + o.h)).map(o=>o.h);
+      if (hs.length === 0) return;
+      
+      const cs = r.c.filter(c => sel.colors.has(r.s + '|' + c));
+      if (cs.length === 0) return;
+      
+      const ls = layersOf(r.hg).filter(l => sel.layers.has(r.s + '|' + l));
+      if (ls.length === 0) return;
+      
+      hs.forEach(h => cs.forEach(c => ls.forEach(l => skus.push({r, h, c, l}))));
+    });
+  } else {
+    // 组合柜仅为统计数量
+    const { validGroups } = getComboStatus();
+    validGroups.forEach(groupInfo => {
+      const { s, validItems } = groupInfo;
+      const hgs = new Set();
+      validItems.forEach(v => {
+        const parsed = parseComboItem(v, s);
+        DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => hgs.add(r.hg));
+      });
+      Array.from(hgs).forEach(hg => {
+        const hs = heightsOf(hg).filter(o => sel.styles.has(hg + '|' + o.h));
+        const cs = ['黑', '白', '绿'].filter(c => sel.colors.has('combo|' + c));
+        const ls = layersOf(hg).filter(l => sel.layers.has('combo|' + l));
+        hs.forEach(h => cs.forEach(c => ls.forEach(l => skus.push({}))));
+      });
+    });
+  }
+  return skus;
+}
+
+/* ================= 渲染 ================= */
+const el = id => document.getElementById(id);
+
+function renderSteps(){
+  const steps = mode === 'single' ? 
+    ['系列', '门型', '宽度', '款式', '颜色', '层数', '生成'] :
+    ['系列', '配置组合', '款式', '颜色', '层数', '生成'];
+    
+  el('steps').innerHTML = steps.map((s,i)=>{
+    const cls = i === step ? 'active' : (i < step ? 'done' : '');
+    const canJump = i <= step || isStepReady(i);
+    return `<div class="step ${cls}" data-step="${i}" ${canJump?'':'style="opacity:.5;pointer-events:none"'}>
+      <span class="num">${i+1}</span>${s}
+    </div>`;
+  }).join('');
+}
+
+function renderSummary(){
+  const parts = [];
+  if(sel.series.size) parts.push(`<span class="cond" data-jump="0">系列：${[...sel.series].join('、')}</span>`);
+  
+  if (mode === 'single') {
+    const countMap = {
+      models: new Set([...sel.models].map(k=>k.split('|')[1])),
+      widths: new Set([...sel.widths].map(k=>k.split('|')[1])),
+      styles: new Set([...sel.styles].map(k=>STYLE_NAME[k.split('|')[1]] || k.split('|')[1] + 'mm')),
+      colors: new Set([...sel.colors].map(k=>COLOR_NAME[k.split('|')[1]] || k.split('|')[1])),
+      layers: new Set([...sel.layers].map(k=>k.split('|')[1] + '层'))
+    };
+    if(sel.models.size) parts.push(`<span class="cond" data-jump="1">门型：${[...countMap.models].join('、')}</span>`);
+    if(sel.widths.size) parts.push(`<span class="cond" data-jump="2">宽度：${[...countMap.widths].join('、')}mm</span>`);
+    if(sel.styles.size) parts.push(`<span class="cond" data-jump="3">款式：${[...countMap.styles].join('、')}</span>`);
+    if(sel.colors.size) parts.push(`<span class="cond" data-jump="4">颜色：${[...countMap.colors].join('、')}</span>`);
+    if(sel.layers.size) parts.push(`<span class="cond" data-jump="5">层数：${[...countMap.layers].join('、')}</span>`);
+  } else {
+    const { validGroups } = getComboStatus();
+    if (validGroups.length > 0) {
+      parts.push(`<span class="cond" data-jump="1">已配置 ${validGroups.length} 个组合</span>`);
+    }
+    const countMap = {
+      styles: new Set([...sel.styles].map(k=>STYLE_NAME[k.split('|')[1]] || k.split('|')[1] + 'mm')),
+      colors: new Set([...sel.colors].map(k=>COLOR_NAME[k.split('|')[1]] || k.split('|')[1])),
+      layers: new Set([...sel.layers].map(k=>k.split('|')[1] + '层'))
+    };
+    if(sel.styles.size) parts.push(`<span class="cond" data-jump="2">款式：${[...countMap.styles].join('、')}</span>`);
+    if(sel.colors.size) parts.push(`<span class="cond" data-jump="3">颜色：${[...countMap.colors].join('、')}</span>`);
+    if(sel.layers.size) parts.push(`<span class="cond" data-jump="4">层数：${[...countMap.layers].join('、')}</span>`);
+  }
+  
+  el('summary').innerHTML = parts.length ? parts.join('') : `<span class="empty">请从第 1 步开始选择参数</span>`;
+}
+
+function renderStepHeader(title, type) {
+  return `<div class="step-head">
+    <p class="hint">${title}</p>
+    <div class="mini-btns">
+      <button data-action="all-global" data-type="${type}">全选所有</button>
+      <button data-action="none-global" data-type="${type}">清空所有</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- Step 1 (Common) ---------- */
+function renderStep1(){
+  const counts = {};
+  DATA.forEach(r=>counts[r.s]=(counts[r.s]||0)+1);
+  
+  let displaySeries = [...SERIES];
+  if (mode === 'combo') displaySeries.push('混搭系列');
+  
+  return `${renderStepHeader('选择要做的系列（可多选）。', 'series')}
+    <div class="opt-grid">${displaySeries.map(s=>`
+      <div class="opt ${sel.series.has(s)?'on':''}" data-type="series" data-v="${s}">
+        <div class="t">${s}</div>
+        <div class="d">${s === '混搭系列' ? '跨系列自由组合' : counts[s] + ' 个款式行'}</div>
+      </div>`).join('')}</div>`;
+}
+
+/* ---------- Single Mode Steps ---------- */
+function renderStep2_Single(){
+  if(!sel.series.size) return `<p class="hint">请先返回选择系列。</p>`;
+  let html = renderStepHeader('请分别在各系列下选择需要的门型。', 'model');
+  Array.from(sel.series).forEach(s => {
+    const items = [...new Set(DATA.filter(r=>r.s===s).map(r=>r.m))];
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button data-action="all" data-type="model" data-s="${s}">全选</button>
+          <button data-action="none" data-type="model" data-s="${s}">清空</button>
+        </div>
+      </div>
+      <div class="opt-grid">${items.map(m=>{
+        const key = s + '|' + m;
+        const hasFlag = DATA.some(r=>r.s===s && r.m===m && r.flag);
+        return `<div class="opt ${sel.models.has(key)?'on':''}" data-type="model" data-v="${key}">
+          <div class="t">${m}${hasFlag?'<span class="tag">待补价</span>':''}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderStep3_Single(){
+  if(!sel.models.size) return `<p class="hint">请先返回选择门型。</p>`;
+  let html = renderStepHeader('请分别选择对应的柜体宽度（深度统一为 350mm）。', 'width');
+  Array.from(sel.series).forEach(s => {
+    const modelsInS = DATA.filter(r => r.s === s && sel.models.has(s + '|' + r.m));
+    if (modelsInS.length === 0) {
+      html += `<div class="series-group">
+        <div class="series-head"><h3>${s}</h3></div>
+        <p class="hint" style="margin:0">该系列未选择门型，跳过。</p>
+      </div>`;
+      return;
+    }
+    const widths = [...new Set(modelsInS.map(r=>r.w))].sort((a,b)=>a-b);
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button data-action="all" data-type="width" data-s="${s}">全选</button>
+          <button data-action="none" data-type="width" data-s="${s}">清空</button>
+        </div>
+      </div>
+      <div class="opt-grid">${widths.map(w=>{
+        const key = s + '|' + w;
+        return `<div class="opt ${sel.widths.has(key)?'on':''}" data-type="width" data-v="${key}">
+          <div class="t">宽 ${w} mm</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderStep4_Single(){
+  if(!sel.widths.size) return `<p class="hint">请先返回选择宽度。</p>`;
+  let html = renderStepHeader('柜腿统一高 150mm：站脚款带腿，落地款总高少 150mm。高度分开做 SKU。', 'style');
+  Array.from(sel.series).forEach(s => {
+    const validRows = DATA.filter(r => r.s === s && sel.models.has(s+'|'+r.m) && sel.widths.has(s+'|'+r.w));
+    if(!validRows.length) {
+      html += `<div class="series-group">
+        <div class="series-head"><h3>${s}</h3></div>
+        <p class="hint" style="margin:0">该系列尚未选齐门型和宽度，跳过。</p>
+      </div>`;
+      return;
+    }
+    const opts = [];
+    validRows.forEach(r => heightsOf(r.hg).forEach(o => {
+      if(!opts.some(x=>x.h===o.h)) opts.push(o);
+    }));
+    opts.sort((a,b)=>b.h-a.h);
+    
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button data-action="all" data-type="style" data-s="${s}">全选</button>
+          <button data-action="none" data-type="style" data-s="${s}">清空</button>
+        </div>
+      </div>
+      <div class="opt-grid">${opts.map(o=>{
+        const key = s + '|' + o.h;
+        return `<div class="opt ${sel.styles.has(key)?'on':''}" data-type="style" data-v="${key}">
+          <div class="t">${o.label} · 高 ${o.h} mm</div>
+          <div class="d">${o.desc}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderStep5_Single(){
+  if(!sel.styles.size) return `<p class="hint">请先返回选择款式。</p>`;
+  let html = renderStepHeader('请分别选择颜色（可多选）。', 'color');
+  Array.from(sel.series).forEach(s => {
+    const validRows = DATA.filter(r => r.s === s && sel.models.has(s+'|'+r.m) && sel.widths.has(s+'|'+r.w) && heightsOf(r.hg).some(o=>sel.styles.has(s+'|'+o.h)));
+    if(!validRows.length) {
+      html += `<div class="series-group">
+        <div class="series-head"><h3>${s}</h3></div>
+        <p class="hint" style="margin:0">该系列尚未选齐前置条件，跳过。</p>
+      </div>`;
+      return;
+    }
+    const colors = new Set();
+    validRows.forEach(r => r.c.forEach(c=>colors.add(c)));
+    const arr = Array.from(colors).sort((a,b) => {
+      const order = {'黑':1, '白':2, '绿':3};
+      return (order[a]||99) - (order[b]||99);
+    });
+    
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button data-action="all" data-type="color" data-s="${s}">全选</button>
+          <button data-action="none" data-type="color" data-s="${s}">清空</button>
+        </div>
+      </div>
+      <div class="opt-grid">${arr.map(c=>{
+        const key = s + '|' + c;
+        return `<div class="opt ${sel.colors.has(key)?'on':''}" data-type="color" data-v="${key}">
+          <div class="t">${COLOR_NAME[c] || c}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderStep6_Single(){
+  if(!sel.colors.size) return `<p class="hint">请先返回选择颜色。</p>`;
+  let html = renderStepHeader('1320 组只有 4/5 层；1020 与 1200 组有 3/4/5 层。同柜体不同层数拆分独立 SKU。', 'layer');
+  Array.from(sel.series).forEach(s => {
+    const validRows = DATA.filter(r => 
+      r.s === s && 
+      sel.models.has(s+'|'+r.m) && 
+      sel.widths.has(s+'|'+r.w) && 
+      heightsOf(r.hg).some(o=>sel.styles.has(s+'|'+o.h)) &&
+      r.c.some(c=>sel.colors.has(s+'|'+c))
+    );
+    if(!validRows.length) {
+      html += `<div class="series-group">
+        <div class="series-head"><h3>${s}</h3></div>
+        <p class="hint" style="margin:0">该系列尚未选齐前置条件，跳过。</p>
+      </div>`;
+      return;
+    }
+    const layers = new Set();
+    validRows.forEach(r => layersOf(r.hg).forEach(l=>layers.add(l)));
+    const arr = [...layers].sort();
+    
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button data-action="all" data-type="layer" data-s="${s}">全选</button>
+          <button data-action="none" data-type="layer" data-s="${s}">清空</button>
+        </div>
+      </div>
+      <div class="opt-grid">${arr.map(l=>{
+        const key = s + '|' + l;
+        return `<div class="opt ${sel.layers.has(key)?'on':''}" data-type="layer" data-v="${key}">
+          <div class="t">${l} 层</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  return html;
+}
+
+/* ---------- Combo Mode Steps ---------- */
+function renderStep2_Combo() {
+  if(!sel.series.size) return `<p class="hint">请先返回选择系列。</p>`;
+  
+  Array.from(sel.series).forEach(s => {
+    if(!comboConfigs[s] || comboConfigs[s].length === 0) {
+      comboConfigs[s] = [{ items: ['', ''], selected: false }]; 
+    }
+  });
+
+  const { duplicateKeys } = getComboStatus();
+
+  let html = `<div class="step-head">
+    <p class="hint">请在各系列下配置组合柜（每个组合至少选择2个柜子，最多3个）。勾选左侧复选框可进行批量复制。</p>
+  </div>`;
+  
+  Array.from(sel.series).forEach(s => {
+    // 计算当前系列下勾选的数量
+    let selectedCount = 0;
+    comboConfigs[s].forEach(g => { if (g.selected) selectedCount++; });
+
+    html += `<div class="series-group">
+      <div class="series-head">
+        <h3>${s}</h3>
+        <div class="mini-btns">
+          <button class="btn-batch-copy" data-action="batch-copy" data-s="${s}" ${selectedCount < 2 ? 'disabled' : ''}>复制选中组合</button>
+          <button data-action="add-combo-group" data-s="${s}">+ 新建组合</button>
+        </div>
+      </div>
+      <div class="combo-list">`;
+      
+    comboConfigs[s].forEach((group, gIdx) => {
+      const validItems = group.items.filter(v => v);
+      let isDup = false;
+      if (validItems.length >= 2) {
+        const key = [...validItems].sort().join('+');
+        if (duplicateKeys.has(key)) isDup = true;
+      }
+      
+      html += `<div class="combo-row ${isDup ? 'is-duplicate' : ''}">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" class="combo-check" data-s="${s}" data-gidx="${gIdx}" ${group.selected ? 'checked' : ''} style="width:16px; height:16px; accent-color:#2f6fed;">
+          <span class="combo-label">组合${gIdx+1}</span>
+        </label>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; flex:1;">`;
+        
+      group.items.forEach((val, itemIdx) => {
+        if (itemIdx > 0) {
+          html += `<span class="combo-plus">+</span>`;
+        }
+        
+        // ====== 渲染自定义下拉框 ======
+        let displayVal = '-- 请选择柜子 --';
+        if (val) {
+          const parts = val.split('|');
+          if (parts.length === 3) displayVal = `${parts[0]} - ${parts[1]} (宽 ${parts[2]})`;
+          else displayVal = `${parts[0]} (宽 ${parts[1]})`;
+        }
+
+        html += `<div class="custom-select-wrap">
+          <div class="custom-select-display" data-action="toggle-select">
+            <span>${displayVal}</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="custom-select-panel" style="display:none;">
+            <div class="custom-option ${val === '' ? 'selected' : ''}" data-type="combo-select-custom" data-s="${s}" data-gidx="${gIdx}" data-idx="${itemIdx}" data-v="">-- 请选择柜子 --</div>`;
+            
+        if (s === '混搭系列') {
+          SERIES.forEach(realSeries => {
+            const items = [...new Set(DATA.filter(r=>r.s===realSeries).map(r=>`${r.m}|${r.w}`))];
+            if (items.length > 0) {
+              html += `<div class="custom-group">
+                <div class="custom-group-title">▶ ${realSeries}</div>
+                <div class="custom-group-list" style="display:none;">
+                  ${items.map(item => {
+                    const [m, w] = item.split('|');
+                    const optValue = `${realSeries}|${m}|${w}`;
+                    return `<div class="custom-option ${val === optValue ? 'selected' : ''}" data-type="combo-select-custom" data-s="${s}" data-gidx="${gIdx}" data-idx="${itemIdx}" data-v="${optValue}">${m} (宽 ${w})</div>`;
+                  }).join('')}
+                </div>
+              </div>`;
+            }
+          });
+        } else {
+          const items = [...new Set(DATA.filter(r=>r.s===s).map(r=>`${r.m}|${r.w}`))];
+          items.forEach(item => {
+            const [m, w] = item.split('|');
+            html += `<div class="custom-option ${val === item ? 'selected' : ''}" data-type="combo-select-custom" data-s="${s}" data-gidx="${gIdx}" data-idx="${itemIdx}" data-v="${item}">${m} (宽 ${w})</div>`;
+          });
+        }
+        
+        html += `</div></div>`;
+        // ====== 自定义下拉框结束 ======
+      });
+      
+      html += `</div>
+        <div style="display:flex; gap:8px; margin-left:10px;">
+          ${group.items.length < 3 ? `<button class="btn-add-inner" data-s="${s}" data-gidx="${gIdx}">+ 添加柜子</button>` : ''}
+          <button class="btn-copy-combo" data-s="${s}" data-gidx="${gIdx}">复制</button>
+          <button class="btn-del-combo-group" data-s="${s}" data-gidx="${gIdx}">删除</button>
+        </div>
+      </div>`;
+    });
+    
+    html += `</div></div>`;
+  });
+  
+  const { validGroups } = getComboStatus();
+  const hasDup = duplicateKeys.size > 0;
+  
+  let statusMsg = '';
+  if (validGroups.length === 0) {
+    statusMsg = '（至少需要有一个组合包含2个以上的柜子）';
+  } else if (hasDup) {
+    statusMsg = '（发现红框标记的重复组合，请调整后再继续）';
+  } else {
+    statusMsg = '（条件已满足）';
+  }
+  
+  html += `<p class="hint" style="margin-top:16px; color:${validGroups.length === 0 || hasDup ? '#ef4444' : '#10b981'}">
+    已配置 ${validGroups.length} 个有效组合。${statusMsg}
+  </p>`;
+  
+  return html;
+}
+
+function renderStep3_Combo() {
+  const { validGroups } = getComboStatus();
+  if (validGroups.length === 0) return `<p class="hint">请返回上一步，至少配置一个有效的组合。</p>`;
+  
+  let html = renderStepHeader('柜腿统一高 150mm：站脚款带腿，落地款总高少 150mm。', 'style');
+  
+  const hgs = new Set();
+  validGroups.forEach(info => {
+    info.validItems.forEach(v => {
+      const parsed = parseComboItem(v, info.s);
+      DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => hgs.add(r.hg));
+    });
+  });
+  
+  if (hgs.size === 0) {
+    return html + `<p class="hint" style="color:#ef4444;">未能匹配到对应的高度尺寸，请确保上一步已正确选择柜子，或检查类目数据。</p>`;
+  }
+  
+  Array.from(hgs).sort().forEach(hg => {
+    html += `<div class="series-group">
+      <div class="series-head"><h3>高度组 ${hg}</h3></div>
+      <div class="opt-grid">`;
+    heightsOf(hg).forEach(o => {
+      const key = hg + '|' + o.h;
+      html += `<div class="opt ${sel.styles.has(key)?'on':''}" data-type="combo-style" data-v="${key}">
+        <div class="t">${o.label} · 高 ${o.h} mm</div>
+        <div class="d">${o.desc}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  return html;
+}
+
+function renderStep4_Combo() {
+  const { validGroups } = getComboStatus();
+  if (validGroups.length === 0) return `<p class="hint">请返回上一步，至少配置一个有效的组合。</p>`;
+  
+  let html = renderStepHeader('请选择颜色（可多选）。', 'color');
+  
+  const colors = new Set();
+  validGroups.forEach(info => {
+    info.validItems.forEach(v => {
+      const parsed = parseComboItem(v, info.s);
+      DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => r.c.forEach(c => colors.add(c)));
+    });
+  });
+  
+  const arr = Array.from(colors).sort((a,b) => {
+    const order = {'黑':1, '白':2, '绿':3};
+    return (order[a]||99) - (order[b]||99);
+  });
+  
+  html += `<div class="series-group">
+    <div class="opt-grid">${arr.map(c=>{
+      const key = 'combo|' + c;
+      return `<div class="opt ${sel.colors.has(key)?'on':''}" data-type="combo-color" data-v="${key}">
+        <div class="t">${COLOR_NAME[c] || c}</div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+  return html;
+}
+
+function renderStep5_Combo() {
+  const { validGroups } = getComboStatus();
+  if (validGroups.length === 0) return `<p class="hint">请返回上一步，至少配置一个有效的组合。</p>`;
+  
+  let html = renderStepHeader('请选择层数（可多选）。', 'layer');
+  
+  const hgs = new Set();
+  validGroups.forEach(info => {
+    info.validItems.forEach(v => {
+      const parsed = parseComboItem(v, info.s);
+      DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => hgs.add(r.hg));
+    });
+  });
+  
+  const layers = new Set();
+  hgs.forEach(hg => layersOf(hg).forEach(l => layers.add(l)));
+  const arr = [...layers].sort();
+  
+  html += `<div class="series-group">
+    <div class="opt-grid">${arr.map(l=>{
+      const key = 'combo|' + l;
+      return `<div class="opt ${sel.layers.has(key)?'on':''}" data-type="combo-layer" data-v="${key}">
+        <div class="t">${l} 层</div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+  return html;
+}
+
+/* ---------- Result ---------- */
+function renderResult(){
+  const skus = generateSkus();
+  
+  let html = `
+    <div class="res-stats">
+      <div class="res-stat"><b>${skus.length}</b><span>SKU 总数</span></div>
+      <div class="res-stat"><b>${new Set(skus.map(s=>`${s.h}|${s.r?.w}|${s.c}|${s.l}`)).size}</b><span>柜体规格数</span></div>
+      <div class="res-stat"><b>${new Set(skus.map(s=>s.r?.s+'|'+s.r?.m)).size}</b><span>款式数</span></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" style="cursor:default;">SKU 清单</button>
+    </div>`;
+
+  if(!skus.length){
+    html += `<p class="hint">当前组合没有可生成的 SKU。请检查前面的筛选条件，或点击底部重新开始。</p>`;
+    return html;
+  }
+
+  if (mode === 'combo') {
+    const meta = getComboMeta();
+    const { validGroups } = getComboStatus();
+    let listHtml = '';
+    
+    sel.series.forEach(s => {
+      const groupsForS = validGroups.filter(g => g.s === s);
+      if (groupsForS.length > 0) {
+        const title = s.endsWith('系列') ? `${s}组合柜` : `${s}系列组合柜`;
+        listHtml += `<div class="sku-series-title" style="font-size:16px;">【${title}】</div>`;
+        
+        if (meta.layers.length > 0 || meta.colors.length > 0) {
+          listHtml += `<div style="padding:12px 16px; border-bottom:1px dashed #cbd5e1; font-weight:600; color:#2f6fed;">
+            ---层数做${meta.layers.join('、')}层 · 颜色做${meta.colors.join('、')}---
+          </div>`;
+        }
+        
+        let allStands = [];
+        let allFloors = [];
+        
+        groupsForS.forEach(groupInfo => {
+          const items = groupInfo.validItems;
+          const parts = items.map(v => {
+            const parsed = parseComboItem(v, s);
+            return `${parsed.m}(${parsed.w})`;
+          });
+          const comboStr = parts.join(' + ');
+          
+          const hgSet = new Set();
+          items.forEach(v => {
+            const parsed = parseComboItem(v, s);
+            DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => hgSet.add(r.hg));
+          });
+          
+          const cHSet = new Set();
+          Array.from(hgSet).forEach(hg => {
+            heightsOf(hg).forEach(o => {
+              if (sel.styles.has(hg + '|' + o.h)) cHSet.add(o.h);
+            });
+          });
+          
+          const cHs = Array.from(cHSet).sort((a,b)=>b-a);
+          
+          cHs.forEach(h => {
+            const isStand = STYLE_NAME[h] && STYLE_NAME[h].includes('站脚');
+            if (isStand) allStands.push({ h, comboStr });
+            else allFloors.push({ h, comboStr });
+          });
+        });
+        
+        allStands.forEach(item => {
+          listHtml += `<div class="sku-spec-line" style="font-weight:bold;">
+            <span class="prefix stand">站脚（${item.h}）-</span>
+            <span class="dim">${item.comboStr}</span>
+          </div>`;
+        });
+        
+        if (allStands.length > 0 && allFloors.length > 0) {
+          listHtml += `<div style="height:16px;"></div>`;
+        }
+        
+        allFloors.forEach(item => {
+          listHtml += `<div class="sku-spec-line" style="font-weight:bold;">
+            <span class="prefix floor">落地（${item.h}）-</span>
+            <span class="dim">${item.comboStr}</span>
+          </div>`;
+        });
+        
+        listHtml += `<div style="height:12px;"></div>`;
+      }
+    });
+    
+    html += `<div class="list">${listHtml}</div>`;
+  } else {
+    // 单柜模式下，改为和组合柜一样的结构
+    const seriesMap = new Map();
+    skus.forEach(sku => {
+      const key = `${sku.r.s}|${sku.r.m}|${sku.h}|${sku.r.w}`;
+      if (!seriesMap.has(sku.r.s)) seriesMap.set(sku.r.s, new Map());
+      const sizeMap = seriesMap.get(sku.r.s);
+      if (!sizeMap.has(key)) {
+        sizeMap.set(key, { h: sku.h, m: sku.r.m, w: sku.r.w, layers: new Set(), colors: new Set() });
+      }
+      const item = sizeMap.get(key);
+      item.layers.add(sku.l);
+      item.colors.add(sku.c);
+    });
+    
+    let listHtml = '';
+    for (const [series, sizeMap] of seriesMap) {
+      listHtml += `<div class="sku-series-title" style="font-size:16px;">【${series}】</div>`;
+      const items = Array.from(sizeMap.values());
+      
+      // 提取公共层数和颜色
+      let commonLayers = new Set(items[0].layers);
+      let commonColors = new Set(items[0].colors);
+      for (let i = 1; i < items.length; i++) {
+        commonLayers = new Set([...commonLayers].filter(x => items[i].layers.has(x)));
+        commonColors = new Set([...commonColors].filter(x => items[i].colors.has(x)));
+      }
+      
+      if (commonLayers.size > 0 || commonColors.size > 0) {
+        const ls = [...commonLayers].sort((a,b)=>a-b).map(l=>l+'层').join('、');
+        const cs = [...commonColors].sort((a,b)=>{
+          const order = {'黑':1, '白':2, '绿':3};
+          return (order[a]||99) - (order[b]||99);
+        }).map(c => COLOR_NAME[c] || c).join('、');
+        
+        let parts = [];
+        if (commonLayers.size > 0) parts.push(`层数做${ls}`);
+        if (commonColors.size > 0) parts.push(`颜色做${cs}`);
+        if (parts.length > 0) {
+          listHtml += `<div style="padding:12px 16px; border-bottom:1px dashed #cbd5e1; font-weight:600; color:#2f6fed;">
+            ---${parts.join(' · ')}---
+          </div>`;
+        }
+      }
+      
+      // 排序规则：先站脚(1020)后落地(870)，再按门型，最后按宽度降序
+      items.sort((a,b) => b.h - a.h || a.m.localeCompare(b.m) || Number(b.w) - Number(a.w));
+      
+      let stands = [];
+      let floors = [];
+      
+      items.forEach(item => {
+        const isStand = STYLE_NAME[item.h] && STYLE_NAME[item.h].includes('站脚');
+        if (isStand) stands.push(item);
+        else floors.push(item);
+      });
+
+      const buildHtml = (item) => {
+        const isStand = STYLE_NAME[item.h] && STYLE_NAME[item.h].includes('站脚');
+        const prefixStr = `${isStand ? '站脚' : '落地'}（${item.h}）-`;
+        
+        const diffLayers = [...item.layers].filter(l => !commonLayers.has(l)).sort((a,b)=>a-b);
+        const diffColors = [...item.colors].filter(c => !commonColors.has(c)).sort((a,b)=>{
+          const order = {'黑':1, '白':2, '绿':3};
+          return (order[a]||99) - (order[b]||99);
+        });
+        
+        let extra = '';
+        if (diffLayers.length > 0 || diffColors.length > 0) {
+          let extraParts = [];
+          if (diffLayers.length > 0) extraParts.push(`层数做${diffLayers.map(l=>l+'层').join('、')}`);
+          if (diffColors.length > 0) extraParts.push(`颜色做${diffColors.map(c=>COLOR_NAME[c]||c).join('、')}`);
+          extra = ` · ${extraParts.join(' · ')}`;
+        }
+        
+        return `<div class="sku-spec-line">
+          <span class="prefix ${isStand ? 'stand' : 'floor'}">${prefixStr}</span>
+          <span class="dim">${item.m}（${item.w}）</span>
+          ${extra ? `<span class="txt">${extra}</span>` : ''}
+        </div>`;
+      };
+
+      stands.forEach(item => {
+        listHtml += buildHtml(item);
+      });
+      
+      if (stands.length > 0 && floors.length > 0) {
+        listHtml += `<div style="height:16px;"></div>`;
+      }
+      
+      floors.forEach(item => {
+        listHtml += buildHtml(item);
+      });
+
+      listHtml += `<div style="height:12px;"></div>`;
+    }
+    html += `<div class="list">${listHtml}</div>`;
+  }
+  
+  return html;
+}
+
+function renderMain(){
+  if (mode === 'single') {
+    if(step === 0) return renderStep1();
+    if(step === 1) return renderStep2_Single();
+    if(step === 2) return renderStep3_Single();
+    if(step === 3) return renderStep4_Single();
+    if(step === 4) return renderStep5_Single();
+    if(step === 5) return renderStep6_Single();
+    return renderResult();
+  } else {
+    if(step === 0) return renderStep1();
+    if(step === 1) return renderStep2_Combo();
+    if(step === 2) return renderStep3_Combo();
+    if(step === 3) return renderStep4_Combo();
+    if(step === 4) return renderStep5_Combo();
+    return renderResult();
+  }
+}
+
+function renderFooter(){
+  const totalSteps = mode === 'single' ? 6 : 5;
+  if(step === totalSteps){
+    const skus = generateSkus();
+    return `<div class="bar">
+      <button data-nav="prev">上一步</button>
+      <div style="display:flex;gap:10px">
+        <button data-nav="restart">重新开始</button>
+        <button class="primary" data-nav="copy" ${skus.length?'':'disabled'}>复制当前列表</button>
+      </div>
+    </div>`;
+  }
+  const canNext = isStepReady(step);
+  return `<div class="bar">
+    <button data-nav="prev" ${step===0?'disabled':''}>上一步</button>
+    <button class="primary" data-nav="next" ${canNext?'':'disabled'}>下一步</button>
+  </div>`;
+}
+
+function render(){
+  renderSteps();
+  renderSummary();
+  el('main-content').innerHTML = renderMain();
+  el('footer').innerHTML = renderFooter();
+}
+
+/* ================= 交互逻辑 ================= */
+document.addEventListener('click', e=>{
+  // ===== 自定义下拉框交互 =====
+  // 1. 点击下拉框头部 (打开/关闭)
+  const display = e.target.closest('.custom-select-display');
+  if (display) {
+    const wrap = display.closest('.custom-select-wrap');
+    const panel = wrap.querySelector('.custom-select-panel');
+    const isOpen = panel.style.display === 'block';
+    
+    // 关闭其他所有面板
+    document.querySelectorAll('.custom-select-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.custom-select-display .arrow').forEach(a => a.textContent = '▼');
+    
+    if (!isOpen) {
+      panel.style.display = 'block';
+      display.querySelector('.arrow').textContent = '▲';
+    }
+    return;
+  }
+
+  // 2. 点击分组标题 (展开/折叠)
+  const groupTitle = e.target.closest('.custom-group-title');
+  if (groupTitle) {
+    const groupWrap = groupTitle.closest('.custom-group');
+    const list = groupWrap.querySelector('.custom-group-list');
+    const isOpen = list.style.display === 'block';
+    
+    if (isOpen) {
+      list.style.display = 'none';
+      groupTitle.innerHTML = groupTitle.innerHTML.replace('▼', '▶');
+    } else {
+      list.style.display = 'block';
+      groupTitle.innerHTML = groupTitle.innerHTML.replace('▶', '▼');
+    }
+    return;
+  }
+
+  // 3. 点击选项 (选中)
+  const option = e.target.closest('.custom-option');
+  if (option) {
+    const s = option.dataset.s;
+    const gIdx = Number(option.dataset.gidx);
+    const itemIdx = Number(option.dataset.idx);
+    const v = option.dataset.v;
+    
+    if (comboConfigs[s] && comboConfigs[s][gIdx]) {
+      comboConfigs[s][gIdx].items[itemIdx] = v;
+      render(); // 重新渲染，面板会自动关闭
+    }
+    return;
+  }
+
+  // 4. 点击其他地方，关闭所有面板
+  if (!e.target.closest('.custom-select-wrap')) {
+    document.querySelectorAll('.custom-select-panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.custom-select-display .arrow').forEach(a => a.textContent = '▼');
+  }
+
+  // ===== 原有交互 =====
+  // 模式切换
+  const modeTab = e.target.closest('.mode-tab');
+  if (modeTab) {
+    const newMode = modeTab.dataset.mode;
+    if (newMode !== mode) {
+      mode = newMode;
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      modeTab.classList.add('active');
+      resetAll();
+    }
+    return;
+  }
+
+  // 按钮点击
+  const btn = e.target.closest('button[data-action]');
+  if (btn) {
+    const action = btn.dataset.action;
+    const type = btn.dataset.type;
+    const s = btn.dataset.s;
+    
+    if (action === 'add-combo-group') {
+      if(!comboConfigs[s]) comboConfigs[s] = [];
+      comboConfigs[s].push({ items: ['', ''], selected: false });
+      render();
+      return;
+    }
+    
+    if (action === 'batch-copy') {
+      if (btn.disabled) return;
+      let count = 0;
+      const groups = comboConfigs[s] || [];
+      const toAdd = [];
+      groups.forEach(g => {
+        if (g.selected) {
+          toAdd.push({ items: [...g.items], selected: false });
+          g.selected = false;
+          count++;
+        }
+      });
+      comboConfigs[s].push(...toAdd);
+      if (count > 0) {
+        render();
+        showToast(`已批量复制 ${count} 个组合`);
+      }
+      return;
+    }
+    
+    if (mode === 'single') {
+      if (action === 'all-global') selectAllGlobal(type);
+      if (action === 'none-global') clearAllGlobal(type);
+      if (action === 'all') selectAllForSeries(type, s);
+      if (action === 'none') clearAllForSeries(type, s);
+    }
+    return;
+  }
+
+  // 单个复制组合
+  const copyBtn = e.target.closest('.btn-copy-combo');
+  if (copyBtn) {
+    const s = copyBtn.dataset.s;
+    const gIdx = Number(copyBtn.dataset.gidx);
+    if (comboConfigs[s] && comboConfigs[s][gIdx]) {
+      const newGroup = { 
+        items: [...comboConfigs[s][gIdx].items], 
+        selected: false 
+      };
+      comboConfigs[s].splice(gIdx + 1, 0, newGroup);
+      render();
+    }
+    return;
+  }
+
+  // 内部添加柜子
+  const addInnerBtn = e.target.closest('.btn-add-inner');
+  if (addInnerBtn) {
+    const s = addInnerBtn.dataset.s;
+    const gIdx = Number(addInnerBtn.dataset.gidx);
+    if (comboConfigs[s] && comboConfigs[s][gIdx]) {
+      comboConfigs[s][gIdx].items.push('');
+    }
+    render();
+    return;
+  }
+
+  // 删除组合
+  const delComboBtn = e.target.closest('.btn-del-combo-group');
+  if (delComboBtn) {
+    const s = delComboBtn.dataset.s;
+    const gIdx = Number(delComboBtn.dataset.gidx);
+    if (comboConfigs[s]) {
+      comboConfigs[s].splice(gIdx, 1);
+      if (comboConfigs[s].length === 0) {
+        comboConfigs[s] = [{ items: ['', ''], selected: false }];
+      }
+    }
+    render();
+    return;
+  }
+
+  // 选项点击
+  const opt = e.target.closest('.opt');
+  if(opt){
+    const type = opt.dataset.type;
+    const v = opt.dataset.v;
+    const setMap = {series:sel.series, model:sel.models, width:sel.widths, style:sel.styles, color:sel.colors, layer:sel.layers};
+    
+    if (type === 'series') {
+      if(sel.series.has(v)) sel.series.delete(v); else sel.series.add(v);
+    } else if (type === 'model') {
+      if(sel.models.has(v)) sel.models.delete(v); else sel.models.add(v);
+    } else if (type === 'width') {
+      if(sel.widths.has(v)) sel.widths.delete(v); else sel.widths.add(v);
+    } else if (type === 'style' || type === 'combo-style') {
+      if(sel.styles.has(v)) sel.styles.delete(v); else sel.styles.add(v);
+    } else if (type === 'color' || type === 'combo-color') {
+      if(sel.colors.has(v)) sel.colors.delete(v); else sel.colors.add(v);
+    } else if (type === 'layer' || type === 'combo-layer') {
+      if(sel.layers.has(v)) sel.layers.delete(v); else sel.layers.add(v);
+    }
+    
+    render();
+    return;
+  }
+
+  // 顶部步骤跳转
+  const st = e.target.closest('.step');
+  if(st){
+    const i = Number(st.dataset.step);
+    if(i <= step || isStepReady(i)){ 
+      step = i; 
+      if(mode === 'single') autoSelectCurrentStep(); 
+      render(); 
+    }
+    return;
+  }
+
+  // 摘要跳转
+  const cond = e.target.closest('.cond');
+  if(cond){
+    step = Number(cond.dataset.jump);
+    render();
+    return;
+  }
+
+  // 底部导航
+  const nav = e.target.closest('[data-nav]');
+  if(nav){
+    const act = nav.dataset.nav;
+    if(act === 'prev'){ if(step>0){ step--; render(); } }
+    if(act === 'next'){ 
+      if(isStepReady(step)){ 
+        step++; 
+        if(mode === 'single') autoSelectCurrentStep(); 
+        render(); 
+      } 
+    }
+    if(act === 'restart'){
+      resetAll();
+    }
+    if(act === 'copy'){ copyCurrent(); }
+  }
+});
+
+// 复选框改变事件
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('combo-check')) {
+    const s = e.target.dataset.s;
+    const gIdx = Number(e.target.dataset.gidx);
+    if (comboConfigs[s] && comboConfigs[s][gIdx]) {
+      comboConfigs[s][gIdx].selected = e.target.checked;
+      render();
+    }
+    return;
+  }
+});
+
+/* ================= 自动补全与全选逻辑 (仅单柜) ================= */
+function autoSelectCurrentStep() {
+  if (step === 3 && sel.widths.size === 0) {
+    DATA.forEach(r => {
+      if (sel.series.has(r.s) && sel.models.has(r.s+'|'+r.m)) {
+        sel.widths.add(r.s+'|'+r.w);
+      }
+    });
+  }
+  if (step === 4 && sel.styles.size === 0) {
+    DATA.forEach(r => {
+      if (sel.series.has(r.s) && sel.models.has(r.s+'|'+r.m) && sel.widths.has(r.s+'|'+r.w)) {
+        heightsOf(r.hg).forEach(o=>sel.styles.add(r.s+'|'+o.h));
+      }
+    });
+  }
+  if (step === 5 && sel.colors.size === 0) {
+    DATA.forEach(r => {
+      if (sel.series.has(r.s) && sel.models.has(r.s+'|'+r.m) && sel.widths.has(r.s+'|'+r.w) && heightsOf(r.hg).some(o=>sel.styles.has(r.s+'|'+o.h))) {
+        r.c.forEach(c=>sel.colors.add(r.s+'|'+c));
+      }
+    });
+  }
+  if (step === 6 && sel.layers.size === 0) {
+    DATA.forEach(r => {
+      if (sel.series.has(r.s) && sel.models.has(r.s+'|'+r.m) && sel.widths.has(r.s+'|'+r.w) && heightsOf(r.hg).some(o=>sel.styles.has(r.s+'|'+o.h)) && r.c.some(c=>sel.colors.has(r.s+'|'+c))) {
+        layersOf(r.hg).forEach(l=>sel.layers.add(r.s+'|'+l));
+      }
+    });
+  }
+}
+
+function selectAllGlobal(type) {
+  if (type === 'series') SERIES.forEach(s=>sel.series.add(s));
+  if (type === 'model') DATA.forEach(r=>sel.models.add(r.s+'|'+r.m));
+  if (type === 'width') DATA.forEach(r=>sel.widths.add(r.s+'|'+r.w));
+  if (type === 'style') DATA.forEach(r=>heightsOf(r.hg).forEach(o=>sel.styles.add(r.s+'|'+o.h)));
+  if (type === 'color') DATA.forEach(r=>r.c.forEach(c=>sel.colors.add(r.s+'|'+c)));
+  if (type === 'layer') DATA.forEach(r=>layersOf(r.hg).forEach(l=>sel.layers.add(r.s+'|'+l)));
+  render();
+}
+
+function clearAllGlobal(type) {
+  if (type === 'series') sel.series.clear();
+  if (type === 'model') sel.models.clear();
+  if (type === 'width') sel.widths.clear();
+  if (type === 'style') sel.styles.clear();
+  if (type === 'color') sel.colors.clear();
+  if (type === 'layer') sel.layers.clear();
+  render();
+}
+
+function selectAllForSeries(type, s) {
+  if (type === 'model') {
+    DATA.filter(r=>r.s===s).forEach(r=>sel.models.add(s+'|'+r.m));
+  }
+  if (type === 'width') {
+    DATA.filter(r => r.s === s && sel.models.has(s+'|'+r.m)).forEach(r => sel.widths.add(s+'|'+r.w));
+  }
+  if (type === 'style') {
+    DATA.filter(r => r.s === s && sel.models.has(s+'|'+r.m) && sel.widths.has(s+'|'+r.w)).forEach(r => heightsOf(r.hg).forEach(o=>sel.styles.add(s+'|'+o.h)));
+  }
+  if (type === 'color') {
+    DATA.filter(r => r.s === s && sel.models.has(s+'|'+r.m) && sel.widths.has(s+'|'+r.w) && heightsOf(r.hg).some(o=>sel.styles.has(s+'|'+o.h))).forEach(r => r.c.forEach(c=>sel.colors.add(s+'|'+c)));
+  }
+  if (type === 'layer') {
+    DATA.filter(r => r.s === s && sel.models.has(r.s+'|'+r.m) && sel.widths.has(s+'|'+r.w) && heightsOf(r.hg).some(o=>sel.styles.has(s+'|'+o.h)) && r.c.some(c=>sel.colors.has(s+'|'+c))).forEach(r => layersOf(r.hg).forEach(l=>sel.layers.add(s+'|'+l)));
+  }
+  render();
+}
+
+function clearAllForSeries(type, s) {
+  const setMap = {model:sel.models, width:sel.widths, style:sel.styles, color:sel.colors, layer:sel.layers};
+  const set = setMap[type];
+  if(!set) return;
+  [...set].forEach(k => {
+    if (k.startsWith(s + '|')) set.delete(k);
+  });
+  render();
+}
+
+/* ================= 复制与弹窗逻辑 ================= */
+function currentText(){
+  const skus = generateSkus();
+  
+  if (mode === 'combo') {
+    const meta = getComboMeta();
+    const { validGroups } = getComboStatus();
+    let res = [];
+    
+    sel.series.forEach(s => {
+      const groupsForS = validGroups.filter(g => g.s === s);
+      if (groupsForS.length > 0) {
+        const title = s.endsWith('系列') ? `${s}组合柜` : `${s}系列组合柜`;
+        res.push(`【${title}】`);
+        if (meta.layers.length > 0 || meta.colors.length > 0) {
+          res.push(`---层数做${meta.layers.join('、')}层 · 颜色做${meta.colors.join('、')}---`);
+        }
+        
+        let allStands = [];
+        let allFloors = [];
+        
+        groupsForS.forEach(groupInfo => {
+          const items = groupInfo.validItems;
+          const parts = items.map(v => {
+            const parsed = parseComboItem(v, s);
+            return `${parsed.m}(${parsed.w})`;
+          });
+          const comboStr = parts.join(' + ');
+          
+          const hgSet = new Set();
+          items.forEach(v => {
+            const parsed = parseComboItem(v, s);
+            DATA.filter(r => r.s === parsed.series && r.m === parsed.m && r.w === parsed.w).forEach(r => hgSet.add(r.hg));
+          });
+          
+          const cHSet = new Set();
+          Array.from(hgSet).forEach(hg => {
+            heightsOf(hg).forEach(o => {
+              if (sel.styles.has(hg + '|' + o.h)) cHSet.add(o.h);
+            });
+          });
+          
+          const cHs = Array.from(cHSet).sort((a,b)=>b-a);
+          
+          cHs.forEach(h => {
+            const isStand = STYLE_NAME[h] && STYLE_NAME[h].includes('站脚');
+            const prefixStr = `${isStand ? '站脚' : '落地'}（${h}）-`;
+            if (isStand) allStands.push(prefixStr + comboStr);
+            else allFloors.push(prefixStr + comboStr);
+          });
+        });
+        
+        allStands.forEach(line => res.push(line));
+        if (allStands.length > 0 && allFloors.length > 0) res.push('');
+        allFloors.forEach(line => res.push(line));
+        
+        res.push('');
+      }
+    });
+    
+    return res.join('\n').trim();
+  }
+  
+  // 单柜的文本逻辑，与页面渲染同步
+  const seriesMap = new Map();
+  skus.forEach(sku => {
+    const key = `${sku.r.s}|${sku.r.m}|${sku.h}|${sku.r.w}`;
+    if (!seriesMap.has(sku.r.s)) seriesMap.set(sku.r.s, new Map());
+    const sizeMap = seriesMap.get(sku.r.s);
+    if (!sizeMap.has(key)) {
+      sizeMap.set(key, { h: sku.h, m: sku.r.m, w: sku.r.w, layers: new Set(), colors: new Set() });
+    }
+    const item = sizeMap.get(key);
+    item.layers.add(sku.l);
+    item.colors.add(sku.c);
+  });
+  
+  let res = [];
+  for (const [series, sizeMap] of seriesMap) {
+    res.push(`【${series}】`);
+    const items = Array.from(sizeMap.values());
+    
+    let commonLayers = new Set(items[0].layers);
+    let commonColors = new Set(items[0].colors);
+    for (let i = 1; i < items.length; i++) {
+      commonLayers = new Set([...commonLayers].filter(x => items[i].layers.has(x)));
+      commonColors = new Set([...commonColors].filter(x => items[i].colors.has(x)));
+    }
+    
+    if (commonLayers.size > 0 || commonColors.size > 0) {
+      const ls = [...commonLayers].sort((a,b)=>a-b).map(l=>l+'层').join('、');
+      const cs = [...commonColors].sort((a,b)=>{
+        const order = {'黑':1, '白':2, '绿':3};
+        return (order[a]||99) - (order[b]||99);
+      }).map(c => COLOR_NAME[c] || c).join('、');
+      
+      let parts = [];
+      if (commonLayers.size > 0) parts.push(`层数做${ls}`);
+      if (commonColors.size > 0) parts.push(`颜色做${cs}`);
+      if (parts.length > 0) {
+        res.push(`---${parts.join(' · ')}---`);
+      }
+    }
+    
+    // 排序规则：先站脚(1020)后落地(870)，再按门型，最后按宽度降序
+    items.sort((a,b) => b.h - a.h || a.m.localeCompare(b.m) || Number(b.w) - Number(a.w));
+    
+    let stands = [];
+    let floors = [];
+    
+    items.forEach(item => {
+      const isStand = STYLE_NAME[item.h] && STYLE_NAME[item.h].includes('站脚');
+      if (isStand) stands.push(item);
+      else floors.push(item);
+    });
+
+    const buildText = (item) => {
+      const isStand = STYLE_NAME[item.h] && STYLE_NAME[item.h].includes('站脚');
+      const prefixStr = `${isStand ? '站脚' : '落地'}（${item.h}）-`;
+      
+      const diffLayers = [...item.layers].filter(l => !commonLayers.has(l)).sort((a,b)=>a-b);
+      const diffColors = [...item.colors].filter(c => !commonColors.has(c)).sort((a,b)=>{
+        const order = {'黑':1, '白':2, '绿':3};
+        return (order[a]||99) - (order[b]||99);
+      });
+      
+      let extra = '';
+      if (diffLayers.length > 0 || diffColors.length > 0) {
+        let extraParts = [];
+        if (diffLayers.length > 0) extraParts.push(`层数做${diffLayers.map(l=>l+'层').join('、')}`);
+        if (diffColors.length > 0) extraParts.push(`颜色做${diffColors.map(c=>COLOR_NAME[c]||c).join('、')}`);
+        extra = ` · ${extraParts.join(' · ')}`;
+      }
+      
+      return `${prefixStr}${item.m}（${item.w}）${extra}`;
+    };
+
+    stands.forEach(item => res.push(buildText(item)));
+    if (stands.length > 0 && floors.length > 0) res.push('');
+    floors.forEach(item => res.push(buildText(item)));
+
+    res.push('');
+  }
+  
+  return res.join('\n').trim();
+}
+
+function showToast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// 成功弹窗
+function openModal() {
+  document.getElementById('successModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('successModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('btnContinue').addEventListener('click', () => {
+  closeModal();
+  resetAll();
+});
+
+document.getElementById('btnSubmit').addEventListener('click', () => {
+  window.open('https://web.wps.cn/wo/sl/v32wVBih?app_id=yy9GICgIKfzDNCNpbIkWC', '_blank');
+  closeModal();
+});
+
+document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+
+function copyCurrent(){
+  const txt = currentText();
+  if(!txt) return;
+  const done = () => {
+    showToast('已复制');
+    setTimeout(() => openModal(), 300);
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt, done));
+  }else{
+    fallbackCopy(txt, done);
+  }
+}
+
+function fallbackCopy(txt, cb){
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){ alert('复制失败，请手动选择复制'); }
+  ta.remove();
+}
+
+/* ================= 类目编辑器逻辑 ================= */
+const editorModal = document.getElementById('editorModal');
+const editorTree = document.getElementById('editorTree');
+
+function renderTree() {
+  editorTree.innerHTML = '';
+  
+  const tree = new Map();
+  RAW.forEach(row => {
+    const [s, m, hg, w, d, cs, flag] = row;
+    if (!tree.has(s)) tree.set(s, new Map());
+    const modelMap = tree.get(s);
+    if (!modelMap.has(m)) modelMap.set(m, []);
+    modelMap.get(m).push({ hg, w, d, cs, flag });
+  });
+
+  for (const [s, models] of tree) {
+    const sNode = document.createElement('div');
+    sNode.className = 'tree-node';
+    
+    const sHeader = document.createElement('div');
+    sHeader.className = 'tree-header';
+    sHeader.innerHTML = `
+      <div class="title"><span class="arrow">▶</span> 📁 ${s}</div>
+      <div class="tree-actions">
+        <button data-level="series" data-action="add-model" data-s="${s}">+ 门型</button>
+        <button class="del" data-level="series" data-action="del-series" data-s="${s}">删除</button>
+      </div>
+    `;
+    sHeader.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      toggleNode(sHeader, sChildren);
+    });
+    
+    const sChildren = document.createElement('div');
+    sChildren.className = 'tree-children';
+    
+    for (const [m, sizes] of models) {
+      const mNode = document.createElement('div');
+      mNode.className = 'tree-node';
+      
+      const mHeader = document.createElement('div');
+      mHeader.className = 'tree-header';
+      mHeader.innerHTML = `
+        <div class="title"><span class="arrow">▶</span> 📄 ${m}</div>
+        <div class="tree-actions">
+          <button data-level="model" data-action="add-size" data-s="${s}" data-m="${m}">+ 尺寸</button>
+          <button class="del" data-level="model" data-action="del-model" data-s="${s}" data-m="${m}">删除</button>
+        </div>
+      `;
+      mHeader.addEventListener('click', e => {
+        if (e.target.tagName === 'BUTTON') return;
+        toggleNode(mHeader, mChildren);
+      });
+      
+      const mChildren = document.createElement('div');
+      mChildren.className = 'tree-children';
+      
+      sizes.forEach((size, idx) => {
+        const leaf = document.createElement('div');
+        leaf.className = 'leaf-node';
+        
+        const hasHei = size.cs.includes('黑');
+        const hasWhi = size.cs.includes('白');
+        const hasGre = size.cs.includes('绿');
+
+        leaf.innerHTML = `
+          <div class="leaf-group">
+            <span>高</span>
+            <input class="height-in" type="text" value="${size.hg}" placeholder="如 1020/870">
+          </div>
+          <div class="leaf-group">
+            <span>宽</span>
+            <input class="width-in" type="text" value="${size.w}" placeholder="如 800 或 800+600">
+          </div>
+          <div class="leaf-group">
+            <span>深</span>
+            <input class="depth-in" type="number" value="${size.d || 350}" placeholder="如 350">
+          </div>
+          <div class="leaf-group cb-group">
+            <span>颜色</span>
+            <label><input type="checkbox" class="color-cb" value="黑" ${hasHei?'checked':''}> 黑</label>
+            <label><input type="checkbox" class="color-cb" value="白" ${hasWhi?'checked':''}> 白</label>
+            <label><input type="checkbox" class="color-cb" value="绿" ${hasGre?'checked':''}> 绿</label>
+          </div>
+          <div class="leaf-group">
+            <input class="flag-in" type="text" value="${size.flag || ''}" placeholder="备注(可选)">
+          </div>
+          <button class="del">删除</button>
+        `;
+        leaf.querySelector('.del').addEventListener('click', () => {
+          leaf.remove();
+        });
+        mChildren.appendChild(leaf);
+      });
+      
+      mNode.appendChild(mHeader);
+      mNode.appendChild(mChildren);
+      sChildren.appendChild(mNode);
+    }
+    
+    sNode.appendChild(sHeader);
+    sNode.appendChild(sChildren);
+    editorTree.appendChild(sNode);
+  }
+}
+
+function toggleNode(header, children) {
+  header.classList.toggle('open');
+  children.classList.toggle('open');
+}
+
+editorTree.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  
+  const action = btn.dataset.action;
+  const s = btn.dataset.s;
+  const m = btn.dataset.m;
+  
+  if (action === 'del-series') {
+    if (confirm(`确定删除【${s}】及其所有数据吗？`)) {
+      btn.closest('.tree-node').remove();
+    }
+  }
+  
+  if (action === 'add-model') {
+    const sNode = btn.closest('.tree-node');
+    const sChildren = sNode.querySelector(':scope > .tree-children');
+    const newM = prompt('请输入新门型名称：', '新门型');
+    if (newM && newM.trim()) {
+      const mNode = document.createElement('div');
+      mNode.className = 'tree-node';
+      const mHeader = document.createElement('div');
+      mHeader.className = 'tree-header';
+      mHeader.innerHTML = `
+        <div class="title"><span class="arrow">▶</span> 📄 ${newM.trim()}</div>
+        <div class="tree-actions">
+          <button data-level="model" data-action="add-size" data-s="${s}" data-m="${newM.trim()}">+ 尺寸</button>
+          <button class="del" data-level="model" data-action="del-model" data-s="${s}" data-m="${newM.trim()}">删除</button>
+        </div>
+      `;
+      const mChildren = document.createElement('div');
+      mChildren.className = 'tree-children';
+      mHeader.addEventListener('click', ev => {
+        if (ev.target.tagName === 'BUTTON') return;
+        toggleNode(mHeader, mChildren);
+      });
+      mNode.appendChild(mHeader);
+      mNode.appendChild(mChildren);
+      sChildren.appendChild(mNode);
+      
+      mHeader.classList.add('open');
+      mChildren.classList.add('open');
+      addNewLeaf(mChildren, s, newM.trim());
+    }
+  }
+  
+  if (action === 'del-model') {
+    if (confirm(`确定删除门型【${m}】及其所有尺寸吗？`)) {
+      btn.closest('.tree-node').remove();
+    }
+  }
+  
+  if (action === 'add-size') {
+    const mNode = btn.closest('.tree-node');
+    const mChildren = mNode.querySelector(':scope > .tree-children');
+    addNewLeaf(mChildren, s, m);
+    mChildren.classList.add('open');
+    mNode.querySelector('.tree-header').classList.add('open');
+  }
+});
+
+function addNewLeaf(container, s, m) {
+  const leaf = document.createElement('div');
+  leaf.className = 'leaf-node';
+  leaf.innerHTML = `
+    <div class="leaf-group">
+      <span>高</span>
+      <input class="height-in" type="text" value="1020/870" placeholder="如 1020/870">
+    </div>
+    <div class="leaf-group">
+      <span>宽</span>
+      <input class="width-in" type="text" value="800" placeholder="如 800 或 800+600">
+    </div>
+    <div class="leaf-group">
+      <span>深</span>
+      <input class="depth-in" type="number" value="350" placeholder="如 350">
+    </div>
+    <div class="leaf-group cb-group">
+      <span>颜色</span>
+      <label><input type="checkbox" class="color-cb" value="黑" checked> 黑</label>
+      <label><input type="checkbox" class="color-cb" value="白" checked> 白</label>
+      <label><input type="checkbox" class="color-cb" value="绿"> 绿</label>
+    </div>
+    <div class="leaf-group">
+      <input class="flag-in" type="text" value="" placeholder="备注(可选)">
+    </div>
+    <button class="del">删除</button>
+  `;
+  leaf.querySelector('.del').addEventListener('click', () => {
+    leaf.remove();
+  });
+  container.appendChild(leaf);
+}
+
+document.getElementById('btnOpenEditor').addEventListener('click', () => {
+  renderTree();
+  editorModal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+});
+
+document.getElementById('btnCloseEditor').addEventListener('click', () => {
+  editorModal.classList.remove('show');
+  document.body.style.overflow = '';
+});
+
+document.getElementById('btnAddSeries').addEventListener('click', () => {
+  const newS = prompt('请输入新系列名称：', '新系列');
+  if (newS && newS.trim()) {
+    const sNode = document.createElement('div');
+    sNode.className = 'tree-node';
+    const sHeader = document.createElement('div');
+    sHeader.className = 'tree-header open';
+    sHeader.innerHTML = `
+      <div class="title"><span class="arrow">▶</span> 📁 ${newS.trim()}</div>
+      <div class="tree-actions">
+        <button data-level="series" data-action="add-model" data-s="${newS.trim()}">+ 门型</button>
+        <button class="del" data-level="series" data-action="del-series" data-s="${newS.trim()}">删除</button>
+      </div>
+    `;
+    const sChildren = document.createElement('div');
+    sChildren.className = 'tree-children open';
+    sHeader.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      toggleNode(sHeader, sChildren);
+    });
+    sNode.appendChild(sHeader);
+    sNode.appendChild(sChildren);
+    editorTree.appendChild(sNode);
+  }
+});
+
+// ====== 全新的“保存并更新代码”逻辑 ======
+document.getElementById('btnSaveData').addEventListener('click', async () => {
+  const newData = [];
+  let hasError = false;
+  
+  const sNodes = editorTree.querySelectorAll(':scope > .tree-node');
+  sNodes.forEach(sNode => {
+    const sTitle = sNode.querySelector(':scope > .tree-header .title').textContent.replace('▶', '').replace('📁', '').trim();
+    const mNodes = sNode.querySelectorAll(':scope > .tree-children > .tree-node');
+    
+    mNodes.forEach(mNode => {
+      const mTitle = mNode.querySelector(':scope > .tree-header .title').textContent.replace('▶', '').replace('📄', '').trim();
+      const leaves = mNode.querySelectorAll(':scope > .tree-children > .leaf-node');
+      
+      leaves.forEach(leaf => {
+        const hg = leaf.querySelector('.height-in').value.trim();
+        const w = leaf.querySelector('.width-in').value.trim();
+        const d = Number(leaf.querySelector('.depth-in').value) || 350;
+        
+        let cs = '';
+        ['黑', '白', '绿'].forEach(c => {
+          if (leaf.querySelector(`.color-cb[value="${c}"]`).checked) {
+            cs += c;
+          }
+        });
+        
+        const flag = leaf.querySelector('.flag-in').value.trim();
+        
+        if (hg && w && cs) {
+          newData.push([sTitle, mTitle, hg, w, d, cs, flag]);
+        } else {
+          hasError = true;
+        }
+      });
+    });
+  });
+  
+  if (hasError) {
+    alert('有部分尺寸数据未填写完整（高度组、宽度不能为空，且至少选择一种颜色），请检查。');
+    return;
+  }
+  
+  if (newData.length === 0) {
+    alert('数据不能为空，请至少保留一个尺寸。');
+    return;
+  }
+  
+  RAW = newData;
+  editorModal.classList.remove('show');
+  document.body.style.overflow = '';
+  
+  document.getElementById('steps').innerHTML = '';
+  document.getElementById('summary').innerHTML = '';
+  document.getElementById('main-content').innerHTML = '';
+  document.getElementById('footer').innerHTML = '';
+  document.getElementById('editorTree').innerHTML = '';
+  document.getElementById('successModal').classList.remove('show');
+  
+  let htmlText = document.documentElement.outerHTML;
+  
+  const newDataStr = JSON.stringify(newData, null, 2);
+  const regex = /const DEFAULT_RAW = \[[\s\S]*?\];/;
+  htmlText = htmlText.replace(regex, `const DEFAULT_RAW = ${newDataStr};`);
+  
+  initApp();
+  
+  const blob = new Blob([htmlText], {type: 'text/html'});
+  
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: '餐边柜SKU引导生成器.html',
+        types: [{ description: 'HTML File', accept: {'text/html': ['.html']} }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      
+      location.reload();
+      return;
+    } catch (err) {
+      console.log('用户取消或API失败，使用普通下载', err);
+      if (err.name === 'AbortError') return; 
+    }
+  }
+  
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '餐边柜SKU引导生成器_已更新.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  alert('代码已成功更新并下载了新文件！\n请用新下载的文件替换原文件，发给同事即可直接看到最新数据。');
+});
+  
+/* 启动 */
+initApp();
+</script>
+</body>
+</html>
