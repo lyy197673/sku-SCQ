@@ -361,24 +361,82 @@
     return { validGroups, byKey, duplicateKeys };
   }
 
+  function intersectSet(target, source) {
+    for (const value of Array.from(target)) {
+      if (!source.has(value)) target.delete(value);
+    }
+    return target;
+  }
+
   function getComboContext() {
     const status = getComboStatus();
-    const hgs = new Set();
-    const colors = new Set();
-    const layers = new Set();
+    let commonHgs = null;
 
     for (const info of status.validGroups) {
       const componentRecords = [];
+      const availableHgs = [];
       for (const value of info.validItems) {
         const matches = recordsForComboItem(value, info.s);
         componentRecords.push(...matches);
-        matches.forEach((record) => {
-          hgs.add(record.hg);
-          record.c.forEach((color) => colors.add(color));
-          layersOf(record.hg).forEach((layer) => layers.add(layer));
-        });
+        availableHgs.push(new Set(matches.map((record) => record.hg)));
       }
       info.records = componentRecords;
+
+      const groupHgs = new Set(availableHgs[0] || []);
+      for (let index = 1; index < availableHgs.length; index += 1) {
+        intersectSet(groupHgs, availableHgs[index]);
+      }
+      info.groupHgs = groupHgs;
+      if (groupHgs.size) {
+        commonHgs = commonHgs ? intersectSet(commonHgs, groupHgs) : new Set(groupHgs);
+      } else {
+        commonHgs = new Set();
+      }
+    }
+
+    const hgs = commonHgs || new Set();
+    const selectedHgs = new Set();
+    for (const styleKey of selections.styles) {
+      for (const heightGroup of hgs) {
+        if (styleKey.startsWith(`${heightGroup}|`)) selectedHgs.add(heightGroup);
+      }
+    }
+    const activeHgs = selectedHgs.size ? selectedHgs : hgs;
+    let commonColors = null;
+    let commonLayers = null;
+
+    for (const info of status.validGroups) {
+      const recordsForStyles = (info.records || []).filter((record) =>
+        activeHgs.has(record.hg)
+      );
+      if (!recordsForStyles.length) {
+        commonColors = new Set();
+        commonLayers = new Set();
+        break;
+      }
+
+      let groupColors = null;
+      let groupLayers = null;
+      for (const record of recordsForStyles) {
+        const recordColors = new Set(record.c);
+        const recordLayers = new Set(layersOf(record.hg));
+        groupColors = groupColors
+          ? intersectSet(groupColors, recordColors)
+          : recordColors;
+        groupLayers = groupLayers
+          ? intersectSet(groupLayers, recordLayers)
+          : recordLayers;
+      }
+      if (groupColors) {
+        commonColors = commonColors
+          ? intersectSet(commonColors, groupColors)
+          : groupColors;
+      }
+      if (groupLayers) {
+        commonLayers = commonLayers
+          ? intersectSet(commonLayers, groupLayers)
+          : groupLayers;
+      }
     }
 
     return {
@@ -388,8 +446,8 @@
         const heightB = heightParts(b)[0] || 0;
         return heightB - heightA || collator.compare(a, b);
       }),
-      colors: sortColors(colors),
-      layers: sortLayers(layers),
+      colors: sortColors(commonColors || new Set()),
+      layers: sortLayers(commonLayers || new Set()),
     };
   }
 
@@ -752,9 +810,69 @@
     lastMetricSignature = signature;
   }
 
+  function buildStepSelections() {
+    const values = new Map();
+    const formats = CFG.summary?.formats || {};
+    const joiner = CFG.summary?.joiner || "、";
+    const add = (stepKey, value) => {
+      if (value) values.set(stepKey, value);
+    };
+
+    const selectedSeries = selectedSeriesList();
+    if (selectedSeries.length) {
+      add("series", fmt(formats.seriesList, { value: selectedSeries.join(joiner) }));
+    }
+
+    if (state.mode === "single") {
+      if (selections.models.size) {
+        add("model", fmt(formats.modelCount, { count: selections.models.size }));
+      }
+      if (selections.widths.size) {
+        const widths = new Set(
+          Array.from(selections.widths).map((entry) => entry.split("|").slice(1).join("|"))
+        );
+        add("width", fmt(formats.widthCount, { count: widths.size }));
+      }
+      if (selections.styles.size) {
+        add("style", fmt(formats.styleCount, { count: selections.styles.size }));
+      }
+      if (selections.colors.size) {
+        const colors = sortColors(
+          Array.from(selections.colors).map((entry) => entry.split("|").slice(1).join("|"))
+        );
+        add("color", fmt(formats.colorList, { value: colors.map(colorLabel).join(joiner) }));
+      }
+      if (selections.layers.size) {
+        add("layer", fmt(formats.layerCount, { count: selections.layers.size }));
+      }
+    } else {
+      const { validGroups } = getComboStatus();
+      if (validGroups.length) {
+        add("combo", fmt(formats.comboCount, { count: validGroups.length }));
+      }
+      if (selections.styles.size) {
+        add("style", fmt(formats.styleCount, { count: selections.styles.size }));
+      }
+      if (selections.colors.size) {
+        add(
+          "color",
+          fmt(formats.colorList, {
+            value: selectedComboColors().map(colorLabel).join(joiner),
+          })
+        );
+      }
+      if (selections.layers.size) {
+        add("layer", fmt(formats.layerCount, { count: selections.layers.size }));
+      }
+    }
+
+    return values;
+  }
+
   function renderSteps() {
     const steps = getSteps();
     const total = steps.length || 1;
+    const stepSelections = buildStepSelections();
     ui.stepCount.textContent = fmt(CFG.common?.stepOf, {
       current: state.step + 1,
       total: steps.length,
@@ -766,6 +884,8 @@
         const done = index < state.step;
         const accessible = active || canAccessStep(index);
         const marker = done ? ICONS.check : String(index + 1);
+        const selected = stepSelections.get(step.key) || "";
+        const meta = selected || step.title || "";
         return `<button
           class="step${active ? " is-active" : ""}${done ? " is-done" : ""}"
           type="button"
@@ -777,7 +897,7 @@
           <span class="step__marker">${marker}</span>
           <span class="step__body">
             <span class="step__name">${esc(step.nav || step.title || "")}</span>
-            <span class="step__meta">${esc(step.title || "")}</span>
+            <span class="step__meta${selected ? " step__meta--selected" : ""}"${selected ? ` title="${esc(selected)}"` : ""}>${esc(meta)}</span>
           </span>
           <span class="step__index">${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span>
         </button>`;
@@ -821,134 +941,6 @@
 
     const progress = ((state.step + 1) / Math.max(steps.length, 1)) * 100;
     ui.progressFill.style.width = `${progress}%`;
-  }
-
-  function renderSummary() {
-    const steps = getSteps();
-    const indexes = new Map(steps.map((step, index) => [step.key, index]));
-    const chips = [];
-
-    const addChip = (labelKey, value, stepKey) => {
-      if (!value) return;
-      const index = indexes.get(stepKey);
-      if (index == null) return;
-      chips.push(`<button class="summary-chip" type="button" data-jump="${index}" title="${esc(fmt(CFG.summary?.hint || "", { step: steps[index]?.nav || "" }))}">
-        <span class="summary-chip__label">${esc(CFG.summary?.labels?.[labelKey] || "")}</span>
-        <span class="summary-chip__value">${esc(value)}</span>
-      </button>`);
-    };
-
-    const selectedSeries = selectedSeriesList();
-    if (selectedSeries.length) {
-      addChip(
-        "series",
-        fmt(CFG.summary?.formats?.seriesList, {
-          value: selectedSeries.join(CFG.summary?.joiner || "、"),
-        }),
-        "series"
-      );
-    }
-
-    if (state.mode === "single") {
-      if (selections.models.size) {
-        addChip(
-          "model",
-          fmt(CFG.summary?.formats?.modelCount, {
-            count: selections.models.size,
-          }),
-          "model"
-        );
-      }
-      if (selections.widths.size) {
-        const widths = new Set(
-          Array.from(selections.widths).map((entry) => entry.split("|").slice(1).join("|"))
-        );
-        addChip(
-          "width",
-          fmt(CFG.summary?.formats?.widthCount, { count: widths.size }),
-          "width"
-        );
-      }
-      if (selections.styles.size) {
-        addChip(
-          "style",
-          fmt(CFG.summary?.formats?.styleCount, {
-            count: selections.styles.size,
-          }),
-          "style"
-        );
-      }
-      if (selections.colors.size) {
-        const colors = sortColors(
-          Array.from(selections.colors).map((entry) => entry.split("|").slice(1).join("|"))
-        );
-        addChip(
-          "color",
-          fmt(CFG.summary?.formats?.colorList, {
-            value: colors.map(colorLabel).join(CFG.summary?.joiner || "、"),
-          }),
-          "color"
-        );
-      }
-      if (selections.layers.size) {
-        addChip(
-          "layer",
-          fmt(CFG.summary?.formats?.layerCount, {
-            count: selections.layers.size,
-          }),
-          "layer"
-        );
-      }
-    } else {
-      const { validGroups } = getComboStatus();
-      if (validGroups.length) {
-        addChip(
-          "combos",
-          fmt(CFG.summary?.formats?.comboCount, { count: validGroups.length }),
-          "combo"
-        );
-      }
-      if (selections.styles.size) {
-        addChip(
-          "style",
-          fmt(CFG.summary?.formats?.styleCount, {
-            count: selections.styles.size,
-          }),
-          "style"
-        );
-      }
-      if (selections.colors.size) {
-        const colors = selectedComboColors();
-        addChip(
-          "color",
-          fmt(CFG.summary?.formats?.colorList, {
-            value: colors.map(colorLabel).join(CFG.summary?.joiner || "、"),
-          }),
-          "color"
-        );
-      }
-      if (selections.layers.size) {
-        addChip(
-          "layer",
-          fmt(CFG.summary?.formats?.layerCount, {
-            count: selections.layers.size,
-          }),
-          "layer"
-        );
-      }
-    }
-
-    ui.summaryPanel.innerHTML = `
-      <div class="summary__head">
-        <span class="summary__title">${esc(CFG.summary?.title || "")}</span>
-        <span class="summary__hint">${esc(CFG.summary?.hint || "")}</span>
-      </div>
-      ${
-        chips.length
-          ? `<div class="summary__chips">${chips.join("")}</div>`
-          : `<p class="summary__empty">${esc(CFG.summary?.empty || "")}</p>`
-      }
-    `;
   }
 
   /* ------------------------------------------------------------------------
@@ -1106,8 +1098,10 @@
 
     return groups
       .map(({ series, seriesRecords }) => {
-        const selectedRows = seriesRecords.filter((record) =>
-          selections.widths.has(key(record.s, record.w))
+        const selectedRows = seriesRecords.filter(
+          (record) =>
+            selections.models.has(key(record.s, record.m)) &&
+            selections.widths.has(key(record.s, record.w))
         );
         if (!selectedRows.length) {
           return seriesGroupMarkup({
@@ -1162,6 +1156,7 @@
       .map(({ series, seriesRecords }) => {
         const selectedRows = seriesRecords.filter(
           (record) =>
+            selections.models.has(key(record.s, record.m)) &&
             selections.widths.has(key(record.s, record.w)) &&
             heightsOf(record.hg).some((option) =>
               selections.styles.has(key(record.s, option.height))
@@ -1204,6 +1199,7 @@
       .map(({ series, seriesRecords }) => {
         const selectedRows = seriesRecords.filter(
           (record) =>
+            selections.models.has(key(record.s, record.m)) &&
             selections.widths.has(key(record.s, record.w)) &&
             heightsOf(record.hg).some((option) =>
               selections.styles.has(key(record.s, option.height))
@@ -1751,19 +1747,11 @@
       const floors = group.items.filter((item) => item.kind !== "stand");
 
       stands.forEach((item) => {
-        lines.push(
-          item.prefix +
-            item.name +
-            (item.extra ? `${CFG.result?.metaJoiner || " · "}${item.extra}` : "")
-        );
+        lines.push(item.prefix + item.name);
       });
       if (stands.length && floors.length) lines.push("");
       floors.forEach((item) => {
-        lines.push(
-          item.prefix +
-            item.name +
-            (item.extra ? `${CFG.result?.metaJoiner || " · "}${item.extra}` : "")
-        );
+        lines.push(item.prefix + item.name);
       });
       lines.push("");
     });
@@ -1825,48 +1813,22 @@
       const specMap = groupsMap.get(series);
       if (!specMap || !specMap.size) continue;
       const items = Array.from(specMap.values());
-      let commonLayers = new Set(items[0].layers);
-      let commonColors = new Set(items[0].colors);
-
-      for (let index = 1; index < items.length; index += 1) {
-        commonLayers = new Set(
-          Array.from(commonLayers).filter((value) => items[index].layers.has(value))
-        );
-        commonColors = new Set(
-          Array.from(commonColors).filter((value) => items[index].colors.has(value))
-        );
-      }
-
-      const sortedLayers = sortLayers(commonLayers);
-      const sortedColors = sortColors(commonColors);
-      const meta = buildMeta(sortedLayers, sortedColors);
-
       items.sort(sortResultItems);
-      const displayItems = items.map((item) => {
-        const diffLayers = sortLayers(
-          Array.from(item.layers).filter((layer) => !commonLayers.has(layer))
-        );
-        const diffColors = sortColors(
-          Array.from(item.colors).filter((color) => !commonColors.has(color))
-        );
-        const extraParts = [];
-        if (diffLayers.length) {
-          extraParts.push(
-            fmt(CFG.result?.extraLayers, {
-              layers: diffLayers
-                .map((layer) => fmt(CFG.result?.layerValue, { value: layer }))
-                .join(CFG.result?.colorJoiner || "、"),
-            })
-          );
+
+      const requirements = new Map();
+      items.forEach((item) => {
+        const layers = sortLayers(item.layers);
+        const colors = sortColors(item.colors);
+        const requirementKey = `${layers.join(",")}|${colors.join(",")}`;
+        if (!requirements.has(requirementKey)) {
+          requirements.set(requirementKey, { layers, colors, items: [] });
         }
-        if (diffColors.length) {
-          extraParts.push(
-            fmt(CFG.result?.extraColors, {
-              colors: diffColors.map(colorLabel).join(CFG.result?.colorJoiner || "、"),
-            })
-          );
-        }
-        return {
+        requirements.get(requirementKey).items.push(item);
+      });
+
+      for (const requirement of requirements.values()) {
+        const meta = buildMeta(requirement.layers, requirement.colors);
+        const displayItems = requirement.items.map((item) => ({
           kind: item.kind,
           height: item.height,
           prefix: fmt(
@@ -1877,13 +1839,12 @@
             model: item.model,
             width: item.width,
           }),
-          extra: extraParts.join(CFG.result?.metaJoiner || " · "),
           pending: item.pending ? CFG.result?.pending || "" : "",
-        };
-      });
+        }));
 
-      specs += displayItems.length;
-      groups.push({ mode: "single", series, meta, items: displayItems });
+        specs += displayItems.length;
+        groups.push({ mode: "single", series, meta, items: displayItems });
+      }
     }
 
     const text = buildResultText(groups);
@@ -1963,7 +1924,6 @@
           { height: item.height }
         ),
         name: item.comboName,
-        extra: "",
         pending: item.pending ? CFG.result?.pending || "" : "",
       }));
       specs += displayItems.length;
@@ -2013,11 +1973,12 @@
             (item) => `<div class="result-row">
               <span class="pill pill--${item.kind === "stand" ? "stand" : "floor"}">${esc(String(item.prefix).trim())}</span>
               <span class="result-row__name">${esc(item.name)}</span>
-              ${item.extra ? `<span class="result-row__extra">${esc(item.extra)}</span>` : ""}
               ${item.pending ? `<span class="tag--warning">${esc(item.pending)}</span>` : ""}
             </div>`
           )
           .join("");
+        const nextGroup = model.groups[groupIndex + 1];
+        const needsSpacer = nextGroup && nextGroup.series !== group.series;
 
         return `<section class="result-series">
           <div class="result-series__head">
@@ -2026,7 +1987,7 @@
           </div>
           ${group.meta ? `<div class="result-series__meta">${esc(group.meta)}</div>` : ""}
           ${rows || empty}
-          ${groupIndex < model.groups.length - 1 ? '<div class="result-spacer" aria-hidden="true"></div>' : ""}
+          ${needsSpacer ? '<div class="result-spacer" aria-hidden="true"></div>' : ""}
         </section>`;
       })
       .join("");
@@ -2097,7 +2058,6 @@
     renderModeMetrics();
     renderSteps();
     renderStepHeader();
-    renderSummary();
     ui.mainContent.innerHTML = renderMainContent();
     ui.wizardFooter.innerHTML = renderFooter();
 
@@ -2827,7 +2787,6 @@
       progressLabel: $("#progressLabel"),
       stepCount: $("#stepCount"),
       steps: $("#steps"),
-      summaryPanel: $("#summaryPanel"),
       workbench: $(".workbench"),
       wizard: $("#wizard"),
       progressFill: $("#progressFill"),

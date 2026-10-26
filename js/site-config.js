@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-25T05:26:50.288Z",
+  "updatedAt": "2026-10-26T02:08:25.701Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -174,18 +174,6 @@ window.SITE_CONFIG = {
     "emptyGroup": "暂无可选项"
   },
   "summary": {
-    "title": "当前条件",
-    "empty": "还没有选择条件，从第 1 步开始吧。",
-    "hint": "点击标签可回到对应步骤修改",
-    "labels": {
-      "series": "系列",
-      "model": "门型",
-      "width": "宽度",
-      "style": "款式",
-      "color": "颜色",
-      "layer": "层数",
-      "combos": "组合"
-    },
     "formats": {
       "seriesList": "{value}",
       "modelCount": "{count} 个门型",
@@ -259,13 +247,11 @@ window.SITE_CONFIG = {
     "comboItem": "{model}({width})",
     "comboItemMixed": "{model}({width})",
     "metaWrap": "---{content}---",
-    "metaLayers": "层数做{layers}",
-    "metaColors": "颜色做{colors}",
+    "metaLayers": "层板数：{layers}",
+    "metaColors": "颜色：{colors}",
     "metaJoiner": " · ",
     "standingPrefix": "站脚（{height}）- ",
     "floorPrefix": "落地（{height}）- ",
-    "extraLayers": "层数做{layers}",
-    "extraColors": "颜色做{colors}",
     "comboSeparator": " + ",
     "pending": "待补价",
     "layerValue": "{value}层",

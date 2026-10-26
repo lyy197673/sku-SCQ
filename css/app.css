@@ -587,7 +587,9 @@ html[data-theme="dark"] .theme-glyph .icon-moon {
   top: 100px;
   display: flex;
   align-items: stretch;
-  gap: 5px;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
   margin-bottom: 13px;
   padding: 6px;
   border-radius: 22px;
@@ -600,13 +602,12 @@ html[data-theme="dark"] .theme-glyph .icon-moon {
 
 .mode-panel--desktop {
   display: flex;
-  flex: 0 1 318px;
+  flex: 0 0 318px;
   flex-direction: column;
   justify-content: center;
   min-width: 268px;
-  padding-right: 14px;
-  border-right: 1px solid var(--hairline);
-  border-radius: 0;
+  padding: 5px 5px 7px;
+  border-radius: 18px;
 }
 
 .mode-panel--mobile {
@@ -876,6 +877,11 @@ html[data-theme="dark"] .segmented__thumb {
   text-overflow: ellipsis;
 }
 
+.step__meta--selected {
+  color: var(--accent);
+  font-weight: 620;
+}
+
 .step__index {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
@@ -995,13 +1001,15 @@ html[data-theme="dark"] .segmented__thumb {
   flex-direction: column;
   border-radius: calc(var(--radius) + 4px);
   min-height: 620px;
+  overflow: clip;
   animation: panel-in 0.85s var(--ease-out) both;
 }
 
 .wizard__progress {
-  height: 3px;
+  height: 4px;
+  margin: 12px 24px 0;
   overflow: hidden;
-  border-radius: calc(var(--radius) + 4px) calc(var(--radius) + 4px) 0 0;
+  border-radius: 999px;
   background: var(--hairline);
 }
 
@@ -1009,7 +1017,7 @@ html[data-theme="dark"] .segmented__thumb {
   display: block;
   width: 0;
   height: 100%;
-  border-radius: inherit;
+  border-radius: 999px;
   background: linear-gradient(90deg, var(--accent), var(--accent-alt));
   box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.55);
   transition: width 0.65s var(--ease-out);
@@ -3198,6 +3206,12 @@ html[data-theme="dark"] .pill--floor {
     display: none;
   }
 
+  .step__meta--selected {
+    display: block;
+    max-width: 116px;
+    font-size: 9.5px;
+  }
+
   .mode-panel {
     grid-area: mode;
     align-self: center;
@@ -3218,21 +3232,7 @@ html[data-theme="dark"] .pill--floor {
   }
 
   .workbench {
-    position: static;
-    z-index: auto;
-    display: block;
-    margin-bottom: 12px;
-    padding: 5px;
-    border-radius: 19px;
-  }
-
-  .workbench .summary {
-    padding: 8px 10px;
-  }
-
-  .workbench .summary__chips {
-    flex-wrap: wrap;
-    overflow: visible;
+    display: none;
   }
 
   .summary-chip {
@@ -3247,7 +3247,7 @@ html[data-theme="dark"] .pill--floor {
   }
 
   .wizard__progress {
-    border-radius: 28px 28px 0 0;
+    margin: 11px 20px 0;
   }
 
   .page-footer {
@@ -3496,7 +3496,7 @@ html[data-theme="dark"] .pill--floor {
   }
 
   .wizard__progress {
-    border-radius: 26px 26px 0 0;
+    margin: 10px 16px 0;
   }
 
   .wizard__header {
@@ -4566,3 +4566,5 @@ html[data-theme="dark"] .pill--floor {
     font-size: 12px;
   }
 }
+
+

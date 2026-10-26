@@ -200,6 +200,7 @@ npm run check
 ├─ scripts/build.mjs           # 静态构建
 ├─ scripts/check.mjs           # 项目自检
 ├─ 启动编辑器.cmd              # Windows 一键启动
+├─ 一键提交代码.bat            # Windows 一键提交并推送 GitHub
 ├─ start-editor.sh             # macOS / Linux 启动
 ├─ _headers                    # Cloudflare Pages 响应头
 ├─ 使用说明.md                 # 业务用户使用指南
@@ -212,7 +213,20 @@ npm run check
 
 ## 部署到 GitHub 与 Cloudflare Pages
 
-### 1. 上传到 GitHub
+### 一键提交（Windows）
+
+目标仓库：<https://github.com/lyy197673/sku-SCQ>
+
+直接双击项目根目录的 **`一键提交代码.bat`** 即可：
+
+1. 首次运行会从 GitHub 获取仓库的 Git 历史；
+2. 自动暂存所有改动并提交；
+3. 推送到当前分支；
+4. Cloudflare Pages 收到推送后自动重新构建。
+
+首次运行如果弹出 GitHub 登录窗口，按提示完成授权即可。脚本只使用本机 Git 凭据，不会在项目里保存 Token。
+
+### 1. 手动上传到 GitHub（备用）
 
 在项目根目录打开终端：
 
@@ -253,7 +267,7 @@ npm run build
 
 1. 本地双击「启动编辑器.cmd」；
 2. 在编辑器中修改并保存；
-3. 推送代码：
+3. 推送代码：双击「一键提交代码.bat」，或手动执行：
 
 ```bash
 git add js/site-config.js js/catalog.js

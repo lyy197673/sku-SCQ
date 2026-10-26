@@ -1,0 +1,15 @@
+# local data and build artifacts
+.backups/
+.artifacts/
+.git-bootstrap/
+dist/
+node_modules/
+.wrangler/
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.env
+.env.*
