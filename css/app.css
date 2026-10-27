@@ -2336,15 +2336,16 @@ body.is-picker-open {
 .picker-mode-option {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  min-height: 128px;
-  padding: 16px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 3px;
+  min-height: 72px;
+  padding: 10px 14px;
   border: 1px solid var(--hairline);
-  border-radius: 14px;
+  border-radius: 10px;
   color: var(--text);
   background: var(--surface);
-  text-align: left;
   cursor: pointer;
 }
 
@@ -2359,16 +2360,16 @@ body.is-picker-open {
 }
 
 .picker-mode-option strong {
-  font-size: 19px;
-  font-weight: 680;
-  letter-spacing: -0.025em;
+  font-size: 15px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
 }
 
 .picker-mode-option span {
   max-width: 22ch;
   color: var(--text-tertiary);
-  font-size: 11px;
-  line-height: 1.55;
+  font-size: 10.5px;
+  line-height: 1.45;
 }
 
 .combo-picker__head--style {
@@ -4142,7 +4143,8 @@ html[data-theme="dark"] .pill--floor {
   }
 
   .picker-mode-option {
-    min-height: 88px;
+    min-height: 72px;
+    padding: 10px 14px;
   }
 
   .combo-picker__head p {
