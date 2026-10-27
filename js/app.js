@@ -344,10 +344,59 @@
 
   function parseComboItem(value, defaultSeries) {
     const parts = String(value ?? "").split("|");
-    if (parts.length >= 3) {
-      return { series: parts[0], model: parts[1], width: Number(parts[2]) };
+    if (parts.length >= 5) {
+      return {
+        series: parts[0],
+        model: parts[1],
+        width: Number(parts[2]),
+        heightGroup: parts[3],
+        mode: parts[4] === "floor" ? "floor" : "stand",
+      };
     }
-    return { series: defaultSeries, model: parts[0] || "", width: Number(parts[1]) };
+    if (parts.length >= 3) {
+      return {
+        series: parts[0],
+        model: parts[1],
+        width: Number(parts[2]),
+        heightGroup: "",
+        mode: "stand",
+      };
+    }
+    return {
+      series: defaultSeries,
+      model: parts[0] || "",
+      width: Number(parts[1]),
+      heightGroup: "",
+      mode: "stand",
+    };
+  }
+
+  function encodeComboItem(parsed) {
+    if (!parsed?.series || !parsed?.model || !parsed?.width) return "";
+    return `${parsed.series}|${parsed.model}|${parsed.width}|${parsed.heightGroup}|${parsed.mode}`;
+  }
+
+  function comboItemSelection(value, defaultSeries) {
+    const parsed = parseComboItem(value, defaultSeries);
+    const matches = recordsForComboItem(value, defaultSeries);
+    const record = matches.find((item) => item.hg === parsed.heightGroup) || matches[0] || null;
+    const resolved = record
+      ? {
+          ...parsed,
+          heightGroup: record.hg,
+          mode: parsed.mode === "floor" ? "floor" : "stand",
+        }
+      : parsed;
+    const heightOption = record
+      ? heightsOf(record.hg).find((option) => option.kind === resolved.mode)
+      : null;
+    return {
+      parsed: resolved,
+      record,
+      matches,
+      height: heightOption?.height || null,
+      kind: resolved.mode,
+    };
   }
 
   function recordsForComboItem(value, defaultSeries) {
@@ -393,54 +442,21 @@
 
   function getComboContext() {
     const status = getComboStatus();
-    let commonHgs = null;
-
-    for (const info of status.validGroups) {
-      const componentRecords = [];
-      const availableHgs = [];
-      for (const value of info.validItems) {
-        const matches = recordsForComboItem(value, info.s);
-        componentRecords.push(...matches);
-        availableHgs.push(new Set(matches.map((record) => record.hg)));
-      }
-      info.records = componentRecords;
-
-      const groupHgs = new Set(availableHgs[0] || []);
-      for (let index = 1; index < availableHgs.length; index += 1) {
-        intersectSet(groupHgs, availableHgs[index]);
-      }
-      info.groupHgs = groupHgs;
-      if (groupHgs.size) {
-        commonHgs = commonHgs ? intersectSet(commonHgs, groupHgs) : new Set(groupHgs);
-      } else {
-        commonHgs = new Set();
-      }
-    }
-
-    const hgs = commonHgs || new Set();
-    const selectedHgs = new Set();
-    for (const styleKey of selections.styles) {
-      for (const heightGroup of hgs) {
-        if (styleKey.startsWith(`${heightGroup}|`)) selectedHgs.add(heightGroup);
-      }
-    }
-    const activeHgs = selectedHgs.size ? selectedHgs : hgs;
     let commonColors = null;
     let commonLayers = null;
+    const selectedHgs = new Set();
 
     for (const info of status.validGroups) {
-      const recordsForStyles = (info.records || []).filter((record) =>
-        activeHgs.has(record.hg)
+      const itemSelections = info.validItems.map((value) =>
+        comboItemSelection(value, info.s)
       );
-      if (!recordsForStyles.length) {
-        commonColors = new Set();
-        commonLayers = new Set();
-        break;
-      }
+      info.itemSelections = itemSelections;
+      info.records = itemSelections.map((item) => item.record).filter(Boolean);
+      info.records.forEach((record) => selectedHgs.add(record.hg));
 
       let groupColors = null;
       let groupLayers = null;
-      for (const record of recordsForStyles) {
+      for (const record of info.records) {
         const recordColors = new Set(record.c);
         const recordLayers = new Set(layersOf(record.hg));
         groupColors = groupColors
@@ -450,21 +466,21 @@
           ? intersectSet(groupLayers, recordLayers)
           : recordLayers;
       }
-      if (groupColors) {
-        commonColors = commonColors
+      commonColors = groupColors
+        ? commonColors
           ? intersectSet(commonColors, groupColors)
-          : groupColors;
-      }
-      if (groupLayers) {
-        commonLayers = commonLayers
+          : groupColors
+        : commonColors;
+      commonLayers = groupLayers
+        ? commonLayers
           ? intersectSet(commonLayers, groupLayers)
-          : groupLayers;
-      }
+          : groupLayers
+        : commonLayers;
     }
 
     return {
       ...status,
-      hgs: Array.from(hgs).sort((a, b) => {
+      hgs: Array.from(selectedHgs).sort((a, b) => {
         const heightA = heightParts(a)[0] || 0;
         const heightB = heightParts(b)[0] || 0;
         return heightB - heightA || collator.compare(a, b);
@@ -482,6 +498,17 @@
       model: parsed.model,
       width: parsed.width,
     });
+  }
+
+  function comboStyleValueLabel(series, value) {
+    if (!value) return "";
+    const selection = comboItemSelection(value, series);
+    if (!selection.record || !selection.height) return "";
+    const style =
+      selection.parsed.mode === "floor"
+        ? CFG.combo?.floorShort || "落地"
+        : CFG.combo?.standingShort || "站脚";
+    return `${style}${selection.height}`;
   }
 
   /* ------------------------------------------------------------------------
@@ -554,14 +581,8 @@
     }
 
     ensureComboConfigs();
+    selections.styles.clear();
     const context = getComboContext();
-    const allowedStyles = new Set();
-    context.hgs.forEach((heightGroup) => {
-      heightsOf(heightGroup).forEach((option) =>
-        allowedStyles.add(key(heightGroup, option.height))
-      );
-    });
-    keepOnly(selections.styles, allowedStyles);
     keepOnly(selections.colors, new Set(context.colors.map((color) => `combo|${color}`)));
     keepOnly(selections.layers, new Set(context.layers.map((layer) => `combo|${layer}`)));
   }
@@ -1243,7 +1264,9 @@
     const gap = 2;
     const parsed = [];
     for (const product of products) {
-      const markup = createCabinetSVG(product, isFloor, false, { padding });
+      const itemFloor =
+        typeof product.floor === "boolean" ? product.floor : isFloor;
+      const markup = createCabinetSVG(product, itemFloor, false, { padding });
       const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
       const svg = doc.documentElement;
       const viewBox = (svg.getAttribute("viewBox") || "").split(/\s+/).map(Number);
@@ -1253,10 +1276,11 @@
         w: viewBox[2],
         h: viewBox[3],
         item: product,
+        floor: itemFloor,
       });
     }
     if (!parsed.length) return "";
-    const heights = parsed.map((part) => (isFloor ? part.item.hb : part.item.h));
+    const heights = parsed.map((part) => (part.floor ? part.item.hb : part.item.h));
     const uneven = new Set(heights).size > 1;
     const leftSpace = showDimensions && uneven ? 118 : 0;
     const visualW = parsed.reduce((sum, part) => sum + part.w, 0) + gap * (parsed.length - 1);
@@ -1294,7 +1318,7 @@
     const right = last.offset + last.w - padding;
     const labelX = right + 38;
     const top = maxH - last.h + padding;
-    const currentH = isFloor ? last.item.hb : last.item.h;
+    const currentH = last.floor ? last.item.hb : last.item.h;
     const bottom = top + currentH;
     const heightLabel = `<line x1="${labelX}" y1="${top}" x2="${labelX}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
       <line x1="${labelX - 8}" y1="${top}" x2="${labelX + 8}" y2="${top}" stroke="#64748b" stroke-width="2"/>
@@ -1304,7 +1328,7 @@
     let leftHeightLabel = "";
     if (uneven) {
       const first = parsed[0];
-      const firstHeight = isFloor ? first.item.hb : first.item.h;
+      const firstHeight = first.floor ? first.item.hb : first.item.h;
       const firstTop = maxH - first.h + padding;
       const firstBottom = firstTop + firstHeight;
       const leftLabelX = leftSpace - 38;
@@ -1325,8 +1349,11 @@
     return group.items
       .filter(Boolean)
       .map((value) => {
-        const matches = recordsForComboItem(value, series);
-        return matches.length ? productFromRecord(matches[0]) : null;
+        const selection = comboItemSelection(value, series);
+        if (!selection.record) return null;
+        const product = productFromRecord(selection.record);
+        product.floor = selection.kind === "floor";
+        return product;
       })
       .filter(Boolean);
   }
@@ -1758,9 +1785,13 @@
 
   function comboPickerTrigger(series, selectedValue, groupIndex, itemIndex) {
     const display = comboDisplayValue(series, selectedValue);
+    const styleLabel = comboStyleValueLabel(series, selectedValue);
+    const canRemove =
+      Boolean(selectedValue) &&
+      (comboConfigs[series]?.[groupIndex]?.items.length || 0) > 1;
     return `<div class="combo-picker-wrap">
       <button
-        class="combo-picker-trigger${selectedValue ? " has-value" : ""}"
+        class="combo-picker-trigger${selectedValue ? " has-value" : ""}${styleLabel ? " has-style" : ""}"
         type="button"
         data-combo-picker
         data-picker-series="${esc(series)}"
@@ -1768,11 +1799,17 @@
         data-picker-item="${itemIndex}"
         aria-haspopup="dialog"
         aria-expanded="false"
-        aria-label="${esc(fmt(CFG.combo?.groupLabel, { index: groupIndex + 1 }))} · ${esc(display)}"
+        aria-label="${esc(fmt(CFG.combo?.groupLabel, { index: groupIndex + 1 }))} · ${esc(display)}${styleLabel ? ` · ${esc(styleLabel)}` : ""}"
       >
         <span class="combo-picker-trigger__text">${esc(display)}</span>
+        ${styleLabel ? `<span class="combo-style-inline">${esc(styleLabel)}</span>` : ""}
         <span class="combo-picker-trigger__chevron" aria-hidden="true">${ICONS.chevronDown}</span>
       </button>
+      ${
+        canRemove
+          ? `<button class="combo-item-remove" type="button" data-action="remove-combo-item" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" data-item-index="${itemIndex}" title="${esc(CFG.combo?.removeCabinet || "")}" aria-label="${esc(CFG.combo?.removeCabinet || "")}">${ICONS.close}</button>`
+          : ""
+      }
     </div>`;
   }
 
@@ -1900,29 +1937,45 @@
      Cascading cabinet picker
      ------------------------------------------------------------------------ */
 
-  function pickerSeriesData(seriesKey) {
+  function pickerSeriesData(seriesKey, mode) {
     const targetSeries = seriesKey === MIXED_SERIES ? seriesList : [seriesKey];
-    return targetSeries.map((series) => {
-      const rows = records.filter((record) => record.s === series);
-      const models = [];
-      for (const record of rows) {
-        let model = models.find((entry) => entry.name === record.m);
-        if (!model) {
-          model = { name: record.m, widths: [] };
-          models.push(model);
+    return targetSeries
+      .map((series) => {
+        const rows = records.filter((record) => record.s === series);
+        const models = [];
+        for (const record of rows) {
+          const option = heightsOf(record.hg).find((entry) => entry.kind === mode);
+          if (!option) continue;
+          let model = models.find((entry) => entry.name === record.m);
+          if (!model) {
+            model = { name: record.m, widths: [] };
+            models.push(model);
+          }
+          if (
+            !model.widths.some(
+              (entry) => entry.width === record.w && entry.heightGroup === record.hg
+            )
+          ) {
+            model.widths.push({
+              width: record.w,
+              heightGroup: record.hg,
+              height: option.height,
+            });
+          }
         }
-        if (!model.widths.includes(record.w)) model.widths.push(record.w);
-      }
-      models.forEach((model) => {
-        model.widths.sort((a, b) => Number(a) - Number(b));
-      });
-      return { series, models };
-    });
+        models.forEach((model) => {
+          model.widths.sort(
+            (a, b) => Number(a.width) - Number(b.width) || Number(b.height) - Number(a.height)
+          );
+        });
+        return { series, models: models.filter((model) => model.widths.length) };
+      })
+      .filter((group) => group.models.length);
   }
 
-  function comboPickerMarkup(seriesKey, groupIndex, itemIndex, currentValue) {
+  function comboPickerMarkup(seriesKey, groupIndex, itemIndex, currentValue, mode) {
     const current = currentValue ? parseComboItem(currentValue, seriesKey) : null;
-    const groups = pickerSeriesData(seriesKey);
+    const groups = pickerSeriesData(seriesKey, mode);
     const mixed = seriesKey === MIXED_SERIES;
     let totalModels = 0;
 
@@ -1939,23 +1992,23 @@
                 current.model === model.name
             );
             const widths = model.widths
-              .map((width) => {
-                const value = mixed
-                  ? `${group.series}|${model.name}|${width}`
-                  : `${model.name}|${width}`;
+              .map((widthEntry) => {
+                const value = `${group.series}|${model.name}|${widthEntry.width}|${widthEntry.heightGroup}|${mode}`;
                 const selected = Boolean(
                   current &&
                     current.series === group.series &&
                     current.model === model.name &&
-                    Number(current.width) === Number(width)
+                    Number(current.width) === Number(widthEntry.width) &&
+                    current.heightGroup === widthEntry.heightGroup &&
+                    current.mode === mode
                 );
                 return `<button
                   class="picker-width${selected ? " is-selected" : ""}"
                   type="button"
-                  data-picker-pick
+                  data-picker-width
                   data-picker-value="${esc(value)}"
                   aria-pressed="${selected}"
-                >${esc(fmt(CFG.combo?.pickerWidth, { value: width }))}</button>`;
+                >${esc(widthEntry.width)} mm · ${esc(widthEntry.height)}</button>`;
               })
               .join("");
 
@@ -1986,12 +2039,18 @@
       })
       .join("");
 
-    return `<div class="combo-picker" role="dialog" aria-modal="true" aria-labelledby="comboPickerTitle" tabindex="-1">
+    const modeLabel =
+      mode === "floor"
+        ? CFG.catalog?.floor || "落地款"
+        : CFG.catalog?.stand || "站脚款";
+    return `<div class="combo-picker combo-picker--list" role="dialog" aria-modal="true" aria-labelledby="comboPickerTitle" tabindex="-1">
       <span class="combo-picker__grabber" aria-hidden="true"></span>
-      <header class="combo-picker__head">
-        <div>
+      <header class="combo-picker__head combo-picker__head--style">
+        <button class="picker-style-back" type="button" data-picker-mode-back>${ICONS.arrowLeft}<span>${esc(CFG.combo?.pickerModeBack || "")}</span></button>
+        <div class="picker-style-title">
           <h2 id="comboPickerTitle">${esc(CFG.combo?.pickerTitle || "")}</h2>
           <p>${esc(CFG.combo?.pickerHint || "")}</p>
+          <strong>${esc(modeLabel)} · 只显示 ${esc(modeLabel)} 的尺寸</strong>
         </div>
         <button class="combo-picker__close" type="button" data-picker-close aria-label="${esc(CFG.combo?.pickerClose || CFG.common?.close || "")}">${ICONS.close}</button>
       </header>
@@ -2002,6 +2061,89 @@
         <button class="picker-clear" type="button" data-picker-clear>${esc(CFG.combo?.pickerClear || "")}</button>
       </footer>
     </div>`;
+  }
+
+  function comboPickerModeMarkup(series, groupIndex, itemIndex, currentValue) {
+    const current = currentValue ? parseComboItem(currentValue, series) : null;
+    const currentMode = current?.mode;
+    const modes = [
+      {
+        kind: "stand",
+        label: CFG.catalog?.stand || "站脚款",
+        desc: CFG.combo?.pickerModeStandDesc || "",
+      },
+      {
+        kind: "floor",
+        label: CFG.catalog?.floor || "落地款",
+        desc: CFG.combo?.pickerModeFloorDesc || "",
+      },
+    ];
+    const options = modes
+      .map(
+        (mode) => `<button
+          class="picker-mode-option${currentMode === mode.kind ? " is-selected" : ""}"
+          type="button"
+          data-picker-mode="${esc(mode.kind)}"
+          aria-pressed="${currentMode === mode.kind}"
+        >
+          <strong>${esc(mode.label)}</strong>
+          <span>${esc(mode.desc)}</span>
+        </button>`
+      )
+      .join("");
+
+    return `<div class="combo-picker combo-picker--mode" role="dialog" aria-modal="true" aria-labelledby="comboPickerTitle" tabindex="-1">
+      <span class="combo-picker__grabber" aria-hidden="true"></span>
+      <header class="combo-picker__head">
+        <div>
+          <h2 id="comboPickerTitle">${esc(CFG.combo?.pickerModeTitle || "")}</h2>
+          <p>${esc(CFG.combo?.pickerModeHint || "")}</p>
+        </div>
+        <button class="combo-picker__close" type="button" data-picker-close aria-label="${esc(CFG.combo?.pickerClose || CFG.common?.close || "")}">${ICONS.close}</button>
+      </header>
+      <div class="combo-picker__body picker-mode-body">
+        <div class="picker-mode-options">${options}</div>
+      </div>
+      <footer class="combo-picker__foot" ${currentValue ? "" : "hidden"}>
+        <button class="picker-clear" type="button" data-picker-clear>${esc(CFG.combo?.pickerClear || "")}</button>
+      </footer>
+    </div>`;
+  }
+
+  function openPickerModeStep() {
+    if (!activeComboPicker) return;
+    const { series, groupIndex, itemIndex } = activeComboPicker;
+    const group = comboConfigs[series]?.[groupIndex];
+    if (!group) return;
+    ui.pickerLayer.innerHTML = comboPickerModeMarkup(
+      series,
+      groupIndex,
+      itemIndex,
+      group.items[itemIndex] || ""
+    );
+    positionComboPicker();
+    window.requestAnimationFrame(() => {
+      $(".picker-mode-option", ui.pickerLayer)?.focus({ preventScroll: true });
+    });
+  }
+
+  function openPickerList(mode) {
+    if (!activeComboPicker) return;
+    const { series, groupIndex, itemIndex } = activeComboPicker;
+    const group = comboConfigs[series]?.[groupIndex];
+    if (!group) return;
+    activeComboPicker.mode = mode;
+    ui.pickerLayer.innerHTML = comboPickerMarkup(
+      series,
+      groupIndex,
+      itemIndex,
+      group.items[itemIndex] || "",
+      mode
+    );
+    positionComboPicker();
+    window.requestAnimationFrame(() => {
+      $(".combo-picker", ui.pickerLayer)?.focus({ preventScroll: true });
+    });
   }
 
   function positionComboPicker() {
@@ -2051,12 +2193,12 @@
 
     closeComboPicker({ restoreFocus: false });
     const current = group.items[itemIndex] || "";
-    ui.pickerLayer.innerHTML = comboPickerMarkup(series, groupIndex, itemIndex, current);
+    ui.pickerLayer.innerHTML = comboPickerModeMarkup(series, groupIndex, itemIndex, current);
     ui.pickerLayer.setAttribute("aria-hidden", "false");
     ui.pickerLayer.classList.add("is-open");
     document.body.classList.add("is-picker-open");
     trigger.setAttribute("aria-expanded", "true");
-    activeComboPicker = { series, groupIndex, itemIndex, trigger };
+    activeComboPicker = { series, groupIndex, itemIndex, trigger, mode: "" };
     positionComboPicker();
 
     pickerKeyListener = onPickerKeydown;
@@ -2105,7 +2247,21 @@
     const { series, groupIndex, itemIndex } = activeComboPicker;
     const group = comboConfigs[series]?.[groupIndex];
     if (!group) return;
-    group.items[itemIndex] = value;
+
+    if (!value) {
+      group.items[itemIndex] = "";
+    } else {
+      const parsed = parseComboItem(value, series);
+      const matches = recordsForComboItem(value, series);
+      const record = matches.find((item) => item.hg === parsed.heightGroup) || matches[0];
+      group.items[itemIndex] = record
+        ? encodeComboItem({
+            ...parsed,
+            heightGroup: record.hg,
+            mode: parsed.mode === "floor" ? "floor" : "stand",
+          })
+        : value;
+    }
     closeComboPicker({ restoreFocus: false });
     pruneSelections();
     render({ preserveScroll: true });
@@ -2149,6 +2305,20 @@
       closeComboPicker();
       return;
     }
+    if (event.target.closest("[data-picker-mode-back]")) {
+      openPickerModeStep();
+      return;
+    }
+    const modePick = event.target.closest("[data-picker-mode]");
+    if (modePick) {
+      openPickerList(modePick.dataset.pickerMode === "floor" ? "floor" : "stand");
+      return;
+    }
+    const widthPick = event.target.closest("[data-picker-width]");
+    if (widthPick) {
+      applyComboPickerValue(widthPick.dataset.pickerValue || "");
+      return;
+    }
     const seriesToggle = event.target.closest("[data-picker-series-toggle]");
     if (seriesToggle) {
       const section = seriesToggle.closest(".picker-series");
@@ -2166,11 +2336,6 @@
       const expanded = modelToggle.getAttribute("aria-expanded") === "true";
       modelToggle.setAttribute("aria-expanded", String(!expanded));
       if (widths) widths.hidden = expanded;
-      return;
-    }
-    const pick = event.target.closest("[data-picker-pick]");
-    if (pick) {
-      applyComboPickerValue(pick.dataset.pickerValue || "");
       return;
     }
     if (event.target.closest("[data-picker-clear]")) {
@@ -2432,44 +2597,49 @@
     let total = 0;
 
     for (const info of context.validGroups) {
-      const heights = [];
-      const hgs = new Set((info.records || []).map((record) => record.hg));
-      hgs.forEach((heightGroup) => {
-        heightsOf(heightGroup).forEach((option) => {
-          if (selections.styles.has(key(heightGroup, option.height))) {
-            heights.push({ heightGroup, ...option });
-          }
-        });
-      });
+      const selectionsForGroup = (info.itemSelections || []).filter(
+        (selection) => selection.record
+      );
+      if (!selectionsForGroup.length) continue;
 
-      const pending = (info.records || []).some((record) => Boolean(record.flag));
-      (info.records || []).forEach((record) => modelKeys.add(key(record.s, record.m)));
+      const pending = selectionsForGroup.some((selection) =>
+        Boolean(selection.record.flag)
+      );
+      selectionsForGroup.forEach((selection) =>
+        modelKeys.add(key(selection.record.s, selection.record.m))
+      );
 
-      total += heights.length * selectedColors.length * selectedLayers.length;
-
-      if (!heights.length) continue;
+      total += selectedColors.length * selectedLayers.length;
       if (!groupMap.has(info.s)) groupMap.set(info.s, []);
 
-      const comboName = info.validItems
-        .map((value) => {
-          const parsed = parseComboItem(value, info.s);
-          const isMixed = info.s === MIXED_SERIES || parsed.series !== info.s;
-          return fmt(isMixed ? CFG.result?.comboItemMixed : CFG.result?.comboItem, {
-            series: parsed.series,
-            model: parsed.model,
-            width: parsed.width,
-          });
+      const comboName = selectionsForGroup
+        .map((selection) => {
+          const { parsed, record } = selection;
+          const heightOption =
+            heightsOf(record.hg).find((option) => option.kind === parsed.mode) ||
+            heightsOf(record.hg)[0];
+          const styleLabel =
+            parsed.mode === "floor"
+              ? CFG.combo?.floorShort || "落地"
+              : CFG.combo?.standingShort || "站脚";
+          const isMixed =
+            info.s === MIXED_SERIES || parsed.series !== info.s;
+          return fmt(
+            isMixed
+              ? CFG.result?.comboStyledItemMixed || CFG.result?.comboStyledItem
+              : CFG.result?.comboStyledItem,
+            {
+              series: parsed.series,
+              model: parsed.model,
+              width: parsed.width,
+              height: heightOption?.height || "",
+              style: styleLabel,
+            }
+          );
         })
         .join(CFG.result?.comboSeparator || " + ");
 
-      heights.forEach((option) => {
-        groupMap.get(info.s).push({
-          kind: option.kind,
-          height: option.height,
-          comboName,
-          pending,
-        });
-      });
+      groupMap.get(info.s).push({ comboName, pending });
     }
 
     const meta = buildMeta(selectedLayers, selectedColors);
@@ -2479,14 +2649,10 @@
     for (const series of selectedSeriesList()) {
       const items = groupMap.get(series);
       if (!items || !items.length) continue;
-      items.sort(sortResultItems);
       const displayItems = items.map((item) => ({
-        kind: item.kind,
-        height: item.height,
-        prefix: fmt(
-          item.kind === "stand" ? CFG.result?.standingPrefix : CFG.result?.floorPrefix,
-          { height: item.height }
-        ),
+        kind: "",
+        height: 0,
+        prefix: "",
         name: item.comboName,
         pending: item.pending ? CFG.result?.pending || "" : "",
       }));
@@ -2535,7 +2701,7 @@
         const rows = group.items
           .map(
             (item) => `<div class="result-row">
-              <span class="pill pill--${item.kind === "stand" ? "stand" : "floor"}">${esc(String(item.prefix).trim())}</span>
+              ${item.prefix ? `<span class="pill pill--${item.kind === "stand" ? "stand" : "floor"}">${esc(String(item.prefix).trim())}</span>` : ""}
               <span class="result-row__name">${esc(item.name)}</span>
               ${item.pending ? `<span class="tag--warning">${esc(item.pending)}</span>` : ""}
             </div>`
@@ -3006,7 +3172,7 @@
       showToast(CFG.combo?.previewEmpty || "");
       return;
     }
-    comboPreviewState = { series, groupIndex, floor: false };
+    comboPreviewState = { series, groupIndex };
     renderComboPreviewModal();
   }
 
@@ -3086,7 +3252,7 @@
     if (!comboPreviewState) return;
     const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
     if (!products.length) return;
-    const stage = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    const stage = combinedCabinetSvg(products, false, true);
     const legend = products
       .map(
         (product, index) => `<div class="combo-preview-item">
@@ -3105,10 +3271,6 @@
         <p class="modal__eyebrow">${esc(CFG.combo?.preview || "")}</p>
         <h2 class="modal__title" id="comboPreviewTitle">${esc(CFG.combo?.previewTitle || "")}</h2>
         <p class="modal__lead">${esc(CFG.combo?.previewNote || "")}</p>
-      </div>
-      <div class="combo-preview-switch">
-        <button class="${comboPreviewState.floor ? "" : "is-active"}" type="button" data-combo-preview-style="stand">${esc(CFG.catalog?.stand || "")}</button>
-        <button class="${comboPreviewState.floor ? "is-active" : ""}" type="button" data-combo-preview-style="floor">${esc(CFG.catalog?.floor || "")}</button>
       </div>
       <div class="modal__scroll combo-preview-scroll">
         <div class="combo-preview-stage" id="comboPreviewStage">
@@ -3132,12 +3294,8 @@
     const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
     if (!products.length) return;
     const art = $("#comboPreviewArt", ui.modalLayer);
-    if (art) art.innerHTML = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    if (art) art.innerHTML = combinedCabinetSvg(products, false, true);
     resetComboPreviewTransform();
-    $$("[data-combo-preview-style]", ui.modalLayer).forEach((button) => {
-      const active = (button.dataset.comboPreviewStyle === "floor") === comboPreviewState.floor;
-      button.classList.toggle("is-active", active);
-    });
   }
 
   function openAnnouncements() {
@@ -3423,6 +3581,16 @@
     const groups = comboConfigs[series];
     if (!Array.isArray(groups)) return;
 
+    if (action === "remove-combo-item") {
+      const group = groups[groupIndex];
+      const itemIndex = Number(target.dataset.itemIndex);
+      if (group && group.items.length > 1 && Number.isInteger(itemIndex)) {
+        group.items.splice(itemIndex, 1);
+        pruneSelections();
+        render({ preserveScroll: true });
+      }
+      return;
+    }
     if (action === "preview-combo") {
       openComboPreview(series, groupIndex);
       return;
@@ -3511,13 +3679,6 @@
       return;
     }
 
-    const comboStyleButton = event.target.closest("[data-combo-preview-style]");
-    if (comboStyleButton && comboPreviewState) {
-      comboPreviewState.floor = comboStyleButton.dataset.comboPreviewStyle === "floor";
-      refreshComboPreview();
-      return;
-    }
-
     const closeButton = event.target.closest("[data-close-modal]");
     if (closeButton) {
       closeModal();
@@ -3590,6 +3751,7 @@
         action === "add-combo" ||
         action === "add-combo-item" ||
         action === "copy-combo" ||
+        action === "remove-combo-item" ||
         action === "preview-combo" ||
         action === "delete-combo" ||
         action === "batch-copy"

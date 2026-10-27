@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T02:55:30.629Z",
+  "updatedAt": "2026-10-27T05:16:50.160Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -127,13 +127,6 @@ window.SITE_CONFIG = {
         "actionType": ""
       },
       {
-        "key": "style",
-        "nav": "款式",
-        "title": "选择款式",
-        "hint": "按高度组选择站脚或落地款式，可多选。",
-        "actionType": "style"
-      },
-      {
         "key": "color",
         "nav": "颜色",
         "title": "选择颜色",
@@ -238,7 +231,21 @@ window.SITE_CONFIG = {
     "previewEmpty": "请先选择柜体",
     "previewNote": "示意图，实际颜色与款式以最终清单为准。",
     "livePreview": "实时预览",
-    "zoomHint": "滚轮缩放 · 拖拽移动"
+    "zoomHint": "滚轮缩放 · 拖拽移动",
+    "standingShort": "站脚",
+    "floorShort": "落地",
+    "cabinetStyleLabel": "款式",
+    "pickerStyleTitle": "选择款式",
+    "pickerStyleHint": "先定宽度，再选这个柜体做站脚还是落地。",
+    "pickerStyleBack": "返回宽度",
+    "itemStyle": "{model}·{width}·{style}{height}",
+    "itemMixedStyle": "{series}·{model}·{width}·{style}{height}",
+    "pickerModeTitle": "先选站脚还是落地",
+    "pickerModeHint": "选定后，下面只列出这个款式的柜子和高度。",
+    "pickerModeBack": "返回款式",
+    "pickerModeStandDesc": "有柜腿，含腿总高",
+    "pickerModeFloorDesc": "落地款，总高",
+    "removeCabinet": "移除这个柜体"
   },
   "result": {
     "kicker": "RESULT",
@@ -264,7 +271,9 @@ window.SITE_CONFIG = {
     "pending": "待补价",
     "layerValue": "{value}层",
     "colorJoiner": "、",
-    "specCount": "{count} 条"
+    "specCount": "{count} 条",
+    "comboStyledItem": "{height}{style}-{width}{model}",
+    "comboStyledItemMixed": "{height}{style}-{width}{model}"
   },
   "colors": {
     "黑": "黑色",

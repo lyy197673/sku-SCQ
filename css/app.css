@@ -1655,6 +1655,8 @@ html[data-theme="dark"] .segmented__thumb {
   align-items: center;
   flex: 0 0 auto;
   gap: 2px;
+  order: 2;
+  margin-left: auto;
 }
 
 .combo-icon-btn {
@@ -1720,9 +1722,10 @@ html[data-theme="dark"] .segmented__thumb {
 
 .combo-fields {
   display: flex;
-  flex: 1 1 300px;
+  flex: 1 1 100%;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  order: 3;
   gap: 6px;
   min-width: 0;
 }
@@ -1821,23 +1824,23 @@ body.is-picker-open {
 
 .combo-picker-wrap {
   position: relative;
-  flex: 1 1 166px;
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .combo-picker-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   width: 100%;
   height: 36px;
-  padding: 0 11px;
+  padding: 0 9px;
   border: 1px solid var(--hairline);
   border-radius: 9px;
   outline: none;
   color: var(--text);
   background: var(--surface-strong);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 510;
   text-align: left;
   cursor: pointer;
@@ -1863,6 +1866,53 @@ body.is-picker-open {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.combo-style-inline {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.combo-item-remove {
+  position: absolute;
+  z-index: 3;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  opacity: 0.62;
+  cursor: pointer;
+  transition:
+    opacity var(--speed-fast) var(--ease-smooth),
+    color var(--speed-fast) var(--ease-smooth),
+    border-color var(--speed-fast) var(--ease-smooth);
+}
+
+.combo-picker-wrap:hover .combo-item-remove,
+.combo-item-remove:focus-visible {
+  opacity: 1;
+}
+
+.combo-item-remove:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.combo-item-remove svg {
+  width: 9px;
+  height: 9px;
 }
 
 .combo-picker-trigger:not(.has-value) .combo-picker-trigger__text {
@@ -2098,6 +2148,197 @@ body.is-picker-open {
   flex-wrap: wrap;
   gap: 6px;
   padding: 1px 6px 10px 8px;
+}
+
+.picker-mode-body {
+  padding: 16px;
+}
+
+.picker-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.picker-mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-height: 128px;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-mode-option:hover {
+  border-color: var(--accent-line);
+}
+
+.picker-mode-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: var(--focus-ring);
+}
+
+.picker-mode-option strong {
+  font-size: 19px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+
+.picker-mode-option span {
+  max-width: 22ch;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.combo-picker__head--style {
+  align-items: center;
+  gap: 10px;
+}
+
+.picker-style-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.picker-style-back svg {
+  width: 13px;
+  height: 13px;
+}
+
+.picker-style-back:hover {
+  color: var(--text);
+  border-color: var(--hairline-strong);
+}
+
+.picker-style-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.picker-style-title h2 {
+  font-size: 18px;
+}
+
+.picker-style-title p {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+}
+
+.picker-style-title strong {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 620;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.picker-style-body {
+  padding: 12px 14px 16px;
+}
+
+.picker-style-group + .picker-style-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.picker-style-group h3 {
+  margin: 0 2px 7px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.picker-style-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.picker-style-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 70px;
+  padding: 10px 34px 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-style-option:hover {
+  border-color: var(--accent-line);
+}
+
+.picker-style-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: var(--focus-ring);
+}
+
+.picker-style-option__mode {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.picker-style-option strong {
+  font-size: 15px;
+  font-weight: 660;
+  font-variant-numeric: tabular-nums;
+}
+
+.picker-style-option small {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.picker-style-option__check {
+  position: absolute;
+  top: 11px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+.picker-style-option__check svg {
+  width: 11px;
+  height: 11px;
 }
 
 .picker-width {
@@ -3094,7 +3335,7 @@ html[data-theme="dark"] .pill--floor {
 
 @media (max-width: 960px) {
   .app-shell {
-    width: min(100% - 36px, 820px);
+    width: min(100% - 24px, 878px);
     padding-top: calc(16px + var(--safe-top));
   }
 
@@ -3248,6 +3489,17 @@ html[data-theme="dark"] .pill--floor {
 
   .wizard__progress {
     margin: 11px 20px 0;
+  }
+
+  .combo-fields {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    order: 3;
+  }
+
+  .combo-card__actions {
+    order: 2;
+    margin-left: auto;
   }
 
   .page-footer {
@@ -3676,6 +3928,33 @@ html[data-theme="dark"] .pill--floor {
 
   .combo-picker__head h2 {
     font-size: 20px;
+  }
+
+  .combo-picker__head--style {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .picker-style-title {
+    order: 3;
+    flex: 1 1 100%;
+    margin-top: 6px;
+  }
+
+  .picker-style-options {
+    grid-template-columns: 1fr;
+  }
+
+  .picker-style-option {
+    min-height: 64px;
+  }
+
+  .picker-mode-options {
+    grid-template-columns: 1fr;
+  }
+
+  .picker-mode-option {
+    min-height: 88px;
   }
 
   .combo-picker__head p {
