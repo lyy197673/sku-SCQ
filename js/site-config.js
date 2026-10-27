@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T02:49:26.468Z",
+  "updatedAt": "2026-10-27T02:55:30.629Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -237,7 +237,8 @@ window.SITE_CONFIG = {
     "previewTitle": "组合效果预览",
     "previewEmpty": "请先选择柜体",
     "previewNote": "示意图，实际颜色与款式以最终清单为准。",
-    "livePreview": "实时预览"
+    "livePreview": "实时预览",
+    "zoomHint": "滚轮缩放 · 拖拽移动"
   },
   "result": {
     "kicker": "RESULT",

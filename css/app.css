@@ -5161,8 +5161,9 @@ html[data-theme="dark"] .pill--floor {
 /* Large combo preview */
 
 .modal--combo-preview {
-  width: min(96vw, 1040px);
-  max-height: min(91dvh, 900px);
+  width: min(98vw, 1500px);
+  height: min(94dvh, 1000px);
+  max-height: min(94dvh, 1000px);
 }
 
 .combo-preview-switch {
@@ -5194,33 +5195,119 @@ html[data-theme="dark"] .pill--floor {
 }
 
 .combo-preview-scroll {
-  padding: 0 30px 26px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 30px 24px;
+  overflow: auto;
 }
 
 .combo-preview-stage {
-  display: grid;
-  place-items: center;
-  min-height: 300px;
-  max-height: 52vh;
-  padding: 12px;
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-height: 440px;
+  max-height: none;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--hairline);
   border-radius: 16px;
   background: #fff;
+  cursor: grab;
+  touch-action: none;
 }
 
-.combo-preview-stage svg {
+.combo-preview-stage.is-dragging {
+  cursor: grabbing;
+}
+
+.combo-preview-art {
+  position: absolute;
+  inset: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.combo-preview-art svg {
   display: block;
   width: 100%;
   height: 100%;
-  max-height: 50vh;
+  max-height: none;
+}
+
+.combo-preview-tools {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-sm);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.combo-preview-tools button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.combo-preview-tools button:hover {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.combo-preview-tools button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.combo-preview-tools span {
+  min-width: 43px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: center;
+}
+
+.combo-preview-hint {
+  position: absolute;
+  z-index: 1;
+  bottom: 12px;
+  left: 14px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  font-size: 10px;
+  pointer-events: none;
 }
 
 .combo-preview-list {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .combo-preview-item {
@@ -5364,7 +5451,11 @@ html[data-theme="dark"] .pill--floor {
   }
 
   .combo-preview-stage {
-    min-height: 210px;
+    min-height: 280px;
+  }
+
+  .combo-preview-art {
+    inset: 12px;
   }
 
   .combo-preview-list {

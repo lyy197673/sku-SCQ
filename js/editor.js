@@ -259,6 +259,7 @@
     viewLarge: "查看大图按钮",
     preview: "组合预览按钮",
     livePreview: "右侧实时预览标题",
+    zoomHint: "效果图缩放提示",
     previewHint: "组合预览提示",
     previewTitle: "组合预览标题",
     previewEmpty: "组合预览空状态",

@@ -50,6 +50,16 @@
     query: "",
   };
   let comboPreviewState = null;
+  const comboPreviewView = {
+    scale: 1,
+    x: 0,
+    y: 0,
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    baseX: 0,
+    baseY: 0,
+  };
 
   const selections = {
     series: new Set(),
@@ -1248,11 +1258,11 @@
     if (!parsed.length) return "";
     const heights = parsed.map((part) => (isFloor ? part.item.hb : part.item.h));
     const uneven = new Set(heights).size > 1;
-    const leftSpace = showDimensions && uneven ? 68 : 0;
+    const leftSpace = showDimensions && uneven ? 118 : 0;
     const visualW = parsed.reduce((sum, part) => sum + part.w, 0) + gap * (parsed.length - 1);
     const maxH = Math.max(...parsed.map((part) => part.h));
-    const labelSpace = showDimensions ? 56 : 0;
-    const heightSpace = showDimensions ? 70 : 0;
+    const labelSpace = showDimensions ? 86 : 0;
+    const heightSpace = showDimensions ? 96 : 0;
     let x = leftSpace;
     const groups = parsed
       .map((part) => {
@@ -1272,24 +1282,24 @@
       .map((part) => {
         const x1 = part.offset + padding;
         const x2 = part.offset + part.w - padding;
-        const y = maxH + 18;
+        const y = maxH + 42;
         return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#64748b" stroke-width="2"/>
-          <line x1="${x1}" y1="${y - 6}" x2="${x1}" y2="${y + 6}" stroke="#64748b" stroke-width="2"/>
-          <line x1="${x2}" y1="${y - 6}" x2="${x2}" y2="${y + 6}" stroke="#64748b" stroke-width="2"/>
-          <text x="${(x1 + x2) / 2}" y="${y + 29}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle">宽度${part.item.w}mm</text>`;
+          <line x1="${x1}" y1="${y - 8}" x2="${x1}" y2="${y + 8}" stroke="#64748b" stroke-width="2"/>
+          <line x1="${x2}" y1="${y - 8}" x2="${x2}" y2="${y + 8}" stroke="#64748b" stroke-width="2"/>
+          <text x="${(x1 + x2) / 2}" y="${y + 33}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle">宽度${part.item.w}mm</text>`;
       })
       .join("");
 
     const last = parsed[parsed.length - 1];
     const right = last.offset + last.w - padding;
-    const labelX = right + 13;
+    const labelX = right + 38;
     const top = maxH - last.h + padding;
     const currentH = isFloor ? last.item.hb : last.item.h;
     const bottom = top + currentH;
     const heightLabel = `<line x1="${labelX}" y1="${top}" x2="${labelX}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
-      <line x1="${labelX - 6}" y1="${top}" x2="${labelX + 6}" y2="${top}" stroke="#64748b" stroke-width="2"/>
-      <line x1="${labelX - 6}" y1="${bottom}" x2="${labelX + 6}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
-      <text x="${labelX + 26}" y="${(top + bottom) / 2}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle" transform="rotate(90 ${labelX + 26} ${(top + bottom) / 2})">高度${currentH}mm</text>`;
+      <line x1="${labelX - 8}" y1="${top}" x2="${labelX + 8}" y2="${top}" stroke="#64748b" stroke-width="2"/>
+      <line x1="${labelX - 8}" y1="${bottom}" x2="${labelX + 8}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
+      <text x="${labelX + 28}" y="${(top + bottom) / 2}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle" transform="rotate(90 ${labelX + 28} ${(top + bottom) / 2})">高度${currentH}mm</text>`;
 
     let leftHeightLabel = "";
     if (uneven) {
@@ -1297,11 +1307,11 @@
       const firstHeight = isFloor ? first.item.hb : first.item.h;
       const firstTop = maxH - first.h + padding;
       const firstBottom = firstTop + firstHeight;
-      const leftLabelX = leftSpace - 14;
-      const leftTextX = leftLabelX - 25;
+      const leftLabelX = leftSpace - 38;
+      const leftTextX = leftLabelX - 28;
       leftHeightLabel = `<line x1="${leftLabelX}" y1="${firstTop}" x2="${leftLabelX}" y2="${firstBottom}" stroke="#64748b" stroke-width="2"/>
-        <line x1="${leftLabelX - 6}" y1="${firstTop}" x2="${leftLabelX + 6}" y2="${firstTop}" stroke="#64748b" stroke-width="2"/>
-        <line x1="${leftLabelX - 6}" y1="${firstBottom}" x2="${leftLabelX + 6}" y2="${firstBottom}" stroke="#64748b" stroke-width="2"/>
+        <line x1="${leftLabelX - 8}" y1="${firstTop}" x2="${leftLabelX + 8}" y2="${firstTop}" stroke="#64748b" stroke-width="2"/>
+        <line x1="${leftLabelX - 8}" y1="${firstBottom}" x2="${leftLabelX + 8}" y2="${firstBottom}" stroke="#64748b" stroke-width="2"/>
         <text x="${leftTextX}" y="${(firstTop + firstBottom) / 2}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle" transform="rotate(90 ${leftTextX} ${(firstTop + firstBottom) / 2})">高度${firstHeight}mm</text>`;
     }
 
@@ -3000,6 +3010,78 @@
     renderComboPreviewModal();
   }
 
+  function applyComboPreviewTransform() {
+    const art = $("#comboPreviewArt", ui.modalLayer);
+    if (!art) return;
+    art.style.transform = `translate(${comboPreviewView.x}px, ${comboPreviewView.y}px) scale(${comboPreviewView.scale})`;
+    art.style.cursor = comboPreviewView.scale > 1.001 ? "grab" : "default";
+    const value = $("#comboPreviewZoomValue", ui.modalLayer);
+    if (value) value.textContent = `${Math.round(comboPreviewView.scale * 100)}%`;
+  }
+
+  function resetComboPreviewTransform() {
+    comboPreviewView.scale = 1;
+    comboPreviewView.x = 0;
+    comboPreviewView.y = 0;
+    applyComboPreviewTransform();
+  }
+
+  function bindComboPreviewInteractions() {
+    const stage = $("#comboPreviewStage", ui.modalLayer);
+    if (!stage) return;
+    resetComboPreviewTransform();
+
+    const zoomBy = (factor) => {
+      comboPreviewView.scale = Math.max(0.5, Math.min(4, comboPreviewView.scale * factor));
+      applyComboPreviewTransform();
+    };
+
+    $$("[data-preview-zoom]", ui.modalLayer).forEach((button) => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.previewZoom;
+        if (action === "in") zoomBy(1.25);
+        else if (action === "out") zoomBy(0.8);
+        else resetComboPreviewTransform();
+      });
+    });
+
+    stage.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12);
+      },
+      { passive: false }
+    );
+
+    stage.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest(".combo-preview-tools")) return;
+      comboPreviewView.dragging = true;
+      comboPreviewView.startX = event.clientX;
+      comboPreviewView.startY = event.clientY;
+      comboPreviewView.baseX = comboPreviewView.x;
+      comboPreviewView.baseY = comboPreviewView.y;
+      stage.classList.add("is-dragging");
+      stage.setPointerCapture?.(event.pointerId);
+    });
+
+    stage.addEventListener("pointermove", (event) => {
+      if (!comboPreviewView.dragging) return;
+      comboPreviewView.x = comboPreviewView.baseX + event.clientX - comboPreviewView.startX;
+      comboPreviewView.y = comboPreviewView.baseY + event.clientY - comboPreviewView.startY;
+      applyComboPreviewTransform();
+    });
+
+    const endDrag = () => {
+      if (!comboPreviewView.dragging) return;
+      comboPreviewView.dragging = false;
+      stage.classList.remove("is-dragging");
+    };
+    stage.addEventListener("pointerup", endDrag);
+    stage.addEventListener("pointercancel", endDrag);
+    stage.addEventListener("dblclick", resetComboPreviewTransform);
+  }
+
   function renderComboPreviewModal() {
     if (!comboPreviewState) return;
     const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
@@ -3029,18 +3111,29 @@
         <button class="${comboPreviewState.floor ? "is-active" : ""}" type="button" data-combo-preview-style="floor">${esc(CFG.catalog?.floor || "")}</button>
       </div>
       <div class="modal__scroll combo-preview-scroll">
-        <div class="combo-preview-stage" id="comboPreviewStage">${stage}</div>
+        <div class="combo-preview-stage" id="comboPreviewStage">
+          <div class="combo-preview-art" id="comboPreviewArt">${stage}</div>
+          <div class="combo-preview-tools" role="group" aria-label="${esc(CFG.combo?.zoomHint || "")}">
+            <button type="button" data-preview-zoom="out" aria-label="缩小">−</button>
+            <span id="comboPreviewZoomValue">100%</span>
+            <button type="button" data-preview-zoom="in" aria-label="放大">+</button>
+            <button type="button" data-preview-zoom="reset" aria-label="重置">${ICONS.restart}</button>
+          </div>
+          <span class="combo-preview-hint">${esc(CFG.combo?.zoomHint || "")}</span>
+        </div>
         <div class="combo-preview-list">${legend}</div>
       </div>
     </div>`);
+    bindComboPreviewInteractions();
   }
 
   function refreshComboPreview() {
     if (!comboPreviewState) return;
     const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
     if (!products.length) return;
-    const stage = $("#comboPreviewStage", ui.modalLayer);
-    if (stage) stage.innerHTML = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    const art = $("#comboPreviewArt", ui.modalLayer);
+    if (art) art.innerHTML = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    resetComboPreviewTransform();
     $$("[data-combo-preview-style]", ui.modalLayer).forEach((button) => {
       const active = (button.dataset.comboPreviewStyle === "floor") === comboPreviewState.floor;
       button.classList.toggle("is-active", active);
