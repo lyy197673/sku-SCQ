@@ -2612,32 +2612,61 @@
       total += selectedColors.length * selectedLayers.length;
       if (!groupMap.has(info.s)) groupMap.set(info.s, []);
 
-      const comboName = selectionsForGroup
-        .map((selection) => {
-          const { parsed, record } = selection;
-          const heightOption =
-            heightsOf(record.hg).find((option) => option.kind === parsed.mode) ||
-            heightsOf(record.hg)[0];
-          const styleLabel =
+      const itemDetails = selectionsForGroup.map((selection) => {
+        const { parsed, record } = selection;
+        const heightOption =
+          heightsOf(record.hg).find((option) => option.kind === parsed.mode) ||
+          heightsOf(record.hg)[0];
+        return {
+          series: parsed.series,
+          model: parsed.model,
+          width: parsed.width,
+          height: heightOption?.height || "",
+          style:
             parsed.mode === "floor"
               ? CFG.combo?.floorShort || "落地"
-              : CFG.combo?.standingShort || "站脚";
-          const isMixed =
-            info.s === MIXED_SERIES || parsed.series !== info.s;
-          return fmt(
-            isMixed
-              ? CFG.result?.comboStyledItemMixed || CFG.result?.comboStyledItem
-              : CFG.result?.comboStyledItem,
-            {
-              series: parsed.series,
-              model: parsed.model,
-              width: parsed.width,
-              height: heightOption?.height || "",
-              style: styleLabel,
-            }
-          );
-        })
-        .join(CFG.result?.comboSeparator || " + ");
+              : CFG.combo?.standingShort || "站脚",
+          isMixed: info.s === MIXED_SERIES || parsed.series !== info.s,
+        };
+      });
+      const firstItem = itemDetails[0];
+      const sameHeightStyle =
+        itemDetails.length > 1 &&
+        itemDetails.every(
+          (item) =>
+            item.height === firstItem.height && item.style === firstItem.style
+        );
+      const separator = CFG.result?.comboSeparator || " + ";
+      const comboName = sameHeightStyle
+        ? `${fmt(CFG.result?.comboGroupedLead, {
+            height: firstItem.height,
+            style: firstItem.style,
+          })}${itemDetails
+            .map((item) =>
+              fmt(CFG.result?.comboPlainItem, {
+                series: item.series,
+                model: item.model,
+                width: item.width,
+              })
+            )
+            .join(separator)}`
+        : itemDetails
+            .map((item) =>
+              fmt(
+                item.isMixed
+                  ? CFG.result?.comboStyledItemMixed ||
+                      CFG.result?.comboStyledItem
+                  : CFG.result?.comboStyledItem,
+                {
+                  series: item.series,
+                  model: item.model,
+                  width: item.width,
+                  height: item.height,
+                  style: item.style,
+                }
+              )
+            )
+            .join(separator);
 
       groupMap.get(info.s).push({ comboName, pending });
     }

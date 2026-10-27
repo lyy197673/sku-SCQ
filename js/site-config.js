@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T05:16:50.160Z",
+  "updatedAt": "2026-10-27T05:28:13.846Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -273,7 +273,9 @@ window.SITE_CONFIG = {
     "colorJoiner": "、",
     "specCount": "{count} 条",
     "comboStyledItem": "{height}{style}-{width}{model}",
-    "comboStyledItemMixed": "{height}{style}-{width}{model}"
+    "comboStyledItemMixed": "{height}{style}-{width}{model}",
+    "comboGroupedLead": "{height}{style}--",
+    "comboPlainItem": "{width}{model}"
   },
   "colors": {
     "黑": "黑色",

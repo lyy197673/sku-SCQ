@@ -274,6 +274,8 @@
     standingShort: "站脚简称",
     removeCabinet: "移除单个柜体按钮",
     floorShort: "落地简称",
+    comboGroupedLead: "同高组合前缀格式",
+    comboPlainItem: "同高组合单柜格式",
     comboStyledItem: "组合单柜格式（含高度款式）",
     comboStyledItemMixed: "混搭组合单柜格式",
     previewHint: "组合预览提示",
