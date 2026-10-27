@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T08:02:01.769Z",
+  "updatedAt": "2026-10-27T08:22:15.945Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -76,32 +76,11 @@ window.SITE_CONFIG = {
         "actionType": "model"
       },
       {
-        "key": "width",
-        "nav": "宽度",
-        "title": "确定宽度",
-        "hint": "按系列选择柜体宽度；深度统一为 350 mm。",
-        "actionType": "width"
-      },
-      {
-        "key": "style",
-        "nav": "款式",
-        "title": "选择款式",
-        "hint": "柜腿统一高 150 mm。站脚款含腿，落地款总高减少 150 mm。",
-        "actionType": "style"
-      },
-      {
-        "key": "color",
-        "nav": "颜色",
-        "title": "选择颜色",
-        "hint": "按系列选择颜色，可多选组合。",
-        "actionType": "color"
-      },
-      {
-        "key": "layer",
-        "nav": "层数",
-        "title": "选择层数",
-        "hint": "1320 高度组为 4 / 5 层，1020 与 1200 高度组为 3 / 4 / 5 层。",
-        "actionType": "layer"
+        "key": "widthStyle",
+        "nav": "规格",
+        "title": "选择规格",
+        "hint": "按门型选择宽度和款式，再选择颜色和层数；每项都可多选。",
+        "actionType": ""
       },
       {
         "key": "result",
@@ -175,7 +154,8 @@ window.SITE_CONFIG = {
       "styleCount": "{count} 种款式",
       "colorList": "{value}",
       "layerCount": "{count} 种层数",
-      "comboCount": "{count} 个组合"
+      "comboCount": "{count} 个组合",
+      "widthStyleCount": "{models} 个门型 · {widths} 个宽度"
     },
     "joiner": "、"
   },
@@ -200,7 +180,13 @@ window.SITE_CONFIG = {
     "noModel": "该系列未选择门型，跳过。",
     "noWidth": "该系列尚未选齐门型和宽度，跳过。",
     "noPrereq": "该系列尚未选齐前置条件，跳过。",
-    "selectAllHint": "全选当前步骤可用项"
+    "selectAllHint": "全选当前步骤可用项",
+    "standingShort": "站脚",
+    "floorShort": "落地",
+    "selectSizesAll": "全选",
+    "selectSizesNone": "全不选",
+    "layerLabel": "层数",
+    "colorLabel": "颜色"
   },
   "combo": {
     "groupLabel": "组合 {index}",

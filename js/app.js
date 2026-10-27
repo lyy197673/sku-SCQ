@@ -127,6 +127,46 @@
     return `${a}|${b}`;
   }
 
+  function singleWidthValue(series, model, width) {
+    return `${series}|${model}|${width}`;
+  }
+
+  function singleStyleValue(series, model, heightGroup, kind) {
+    return `${series}|${model}|${heightGroup}|${kind}`;
+  }
+
+  function singleColorValue(series, model, color) {
+    return `${series}|${model}|${color}`;
+  }
+
+  function singleLayerValue(series, model, layer) {
+    return `${series}|${model}|${layer}`;
+  }
+
+  function hasSingleColor(record, color) {
+    return selections.colors.has(
+      singleColorValue(record.s, record.m, color)
+    );
+  }
+
+  function hasSingleLayer(record, layer) {
+    return selections.layers.has(
+      singleLayerValue(record.s, record.m, layer)
+    );
+  }
+
+  function hasSingleWidth(record) {
+    return selections.widths.has(
+      singleWidthValue(record.s, record.m, record.w)
+    );
+  }
+
+  function hasSingleStyle(record, kind) {
+    return selections.styles.has(
+      singleStyleValue(record.s, record.m, record.hg, kind)
+    );
+  }
+
   function uniqueBy(items, getter) {
     const seen = new Set();
     return items.filter((item) => {
@@ -536,41 +576,89 @@
       );
       keepOnly(
         selections.widths,
-        new Set(rowsForModels.map((record) => key(record.s, record.w)))
-      );
-
-      const rowsForWidths = rowsForModels.filter((record) =>
-        selections.widths.has(key(record.s, record.w))
-      );
-      const allowedStyles = new Set();
-      rowsForWidths.forEach((record) => {
-        heightsOf(record.hg).forEach((option) =>
-          allowedStyles.add(key(record.s, option.height))
-        );
-      });
-      keepOnly(selections.styles, allowedStyles);
-
-      const rowsForStyles = rowsForWidths.filter((record) =>
-        heightsOf(record.hg).some((option) =>
-          selections.styles.has(key(record.s, option.height))
-        )
-      );
-      keepOnly(
-        selections.colors,
-        new Set(rowsForStyles.flatMap((record) => record.c.map((color) => key(record.s, color))))
-      );
-
-      const rowsForColors = rowsForStyles.filter((record) =>
-        record.c.some((color) => selections.colors.has(key(record.s, color)))
-      );
-      keepOnly(
-        selections.layers,
         new Set(
-          rowsForColors.flatMap((record) =>
-            layersOf(record.hg).map((layer) => key(record.s, layer))
+          rowsForModels.map((record) =>
+            singleWidthValue(record.s, record.m, record.w)
           )
         )
       );
+
+      const rowsForWidths = rowsForModels.filter(hasSingleWidth);
+      const allowedStyles = new Set();
+      const modelPairs = new Set(
+        rowsForModels.map((record) => key(record.s, record.m))
+      );
+      modelPairs.forEach((pair) => {
+        const [series, model] = pair.split("|");
+        const modelRows = rowsForModels.filter(
+          (record) => record.s === series && record.m === model
+        );
+        const selectedWidthRows = modelRows.filter(hasSingleWidth);
+        const rowsForStyles = selectedWidthRows.length
+          ? selectedWidthRows
+          : modelRows;
+        rowsForStyles.forEach((record) => {
+          heightsOf(record.hg).forEach((option) => {
+            allowedStyles.add(
+              singleStyleValue(record.s, record.m, record.hg, option.kind)
+            );
+          });
+        });
+      });
+      keepOnly(selections.styles, allowedStyles);
+
+      // Per-model color pruning
+      const allowedColors = new Set();
+      const modelPairsForColors = new Set(
+        rowsForModels.map((record) => key(record.s, record.m))
+      );
+      modelPairsForColors.forEach((pair) => {
+        const [series, model] = pair.split("|");
+        const modelRows = rowsForModels.filter(
+          (record) => record.s === series && record.m === model
+        );
+        const selectedWidthRows = modelRows.filter(hasSingleWidth);
+        const widthSource = selectedWidthRows.length ? selectedWidthRows : modelRows;
+        const selectedStyleRows = widthSource.filter((record) =>
+          heightsOf(record.hg).some((option) =>
+            hasSingleStyle(record, option.kind)
+          )
+        );
+        const styleSource = selectedStyleRows.length ? selectedStyleRows : widthSource;
+        styleSource.forEach((record) => {
+          record.c.forEach((color) => {
+            allowedColors.add(singleColorValue(record.s, record.m, color));
+          });
+        });
+      });
+      keepOnly(selections.colors, allowedColors);
+
+      // Per-model layer pruning
+      const allowedLayers = new Set();
+      modelPairsForColors.forEach((pair) => {
+        const [series, model] = pair.split("|");
+        const modelRows = rowsForModels.filter(
+          (record) => record.s === series && record.m === model
+        );
+        const selectedWidthRows = modelRows.filter(hasSingleWidth);
+        const widthSource = selectedWidthRows.length ? selectedWidthRows : modelRows;
+        const selectedStyleRows = widthSource.filter((record) =>
+          heightsOf(record.hg).some((option) =>
+            hasSingleStyle(record, option.kind)
+          )
+        );
+        const styleSource = selectedStyleRows.length ? selectedStyleRows : widthSource;
+        const selectedColorRows = styleSource.filter((record) =>
+          record.c.some((color) => hasSingleColor(record, color))
+        );
+        const colorSource = selectedColorRows.length ? selectedColorRows : styleSource;
+        colorSource.forEach((record) => {
+          layersOf(record.hg).forEach((layer) => {
+            allowedLayers.add(singleLayerValue(record.s, record.m, layer));
+          });
+        });
+      });
+      keepOnly(selections.layers, allowedLayers);
       return;
     }
 
@@ -595,11 +683,67 @@
     return getSteps()[state.step] || null;
   }
 
+  function singleWidthStyleReady() {
+    if (!selections.models.size) return false;
+    for (const series of selectedSeriesList()) {
+      const seriesRecords = recordsForSeries(series);
+      const models = uniqueBy(
+        seriesRecords.filter((record) =>
+          selections.models.has(key(record.s, record.m))
+        ),
+        (record) => record.m
+      );
+      for (const modelRecord of models) {
+        const modelRows = seriesRecords.filter(
+          (record) => record.m === modelRecord.m
+        );
+        const widthRows = modelRows.filter(hasSingleWidth);
+        if (!widthRows.length) return false;
+        const hasStyle = widthRows.some((record) =>
+          heightsOf(record.hg).some((option) =>
+            hasSingleStyle(record, option.kind)
+          )
+        );
+        if (!hasStyle) return false;
+      }
+    }
+    return true;
+  }
+
+  function singleColorLayerReady() {
+    for (const series of selectedSeriesList()) {
+      const modelRows = new Map();
+      for (const record of recordsForSeries(series)) {
+        if (!selections.models.has(key(record.s, record.m))) continue;
+        if (!hasSingleWidth(record)) continue;
+        let rows = modelRows.get(record.m);
+        if (!rows) { rows = []; modelRows.set(record.m, rows); }
+        rows.push(record);
+      }
+      if (!modelRows.size) return false;
+      for (const [model, rows] of modelRows) {
+        const colors = new Set(rows.flatMap((record) => record.c));
+        const hasColor = Array.from(colors).some((color) =>
+          hasSingleColor({ s: series, m: model }, color)
+        );
+        if (!hasColor) return false;
+        const layers = new Set(rows.flatMap((record) => layersOf(record.hg)));
+        const hasLayer = Array.from(layers).some((layer) =>
+          hasSingleLayer({ s: series, m: model }, layer)
+        );
+        if (!hasLayer) return false;
+      }
+    }
+    return true;
+  }
+
   function isStepReady(index) {
     const step = getSteps()[index];
     if (!step) return false;
 
     switch (step.key) {
+      case "widthStyle":
+        return singleWidthStyleReady() && singleColorLayerReady();
       case "series":
         return selections.series.size > 0;
       case "model":
@@ -1375,18 +1519,23 @@
       if (selections.models.size) {
         add("model", fmt(formats.modelCount, { count: selections.models.size }));
       }
-      if (selections.widths.size) {
-        const widths = new Set(
-          Array.from(selections.widths).map((entry) => entry.split("|").slice(1).join("|"))
+      if (selections.widths.size || selections.styles.size) {
+        const widthModels = new Set(
+          Array.from(selections.widths).map((entry) =>
+            entry.split("|").slice(0, 2).join("|")
+          )
         );
-        add("width", fmt(formats.widthCount, { count: widths.size }));
-      }
-      if (selections.styles.size) {
-        add("style", fmt(formats.styleCount, { count: selections.styles.size }));
+        add(
+          "widthStyle",
+          fmt(formats.widthStyleCount || "{models} 个门型 · {widths} 个宽度", {
+            models: widthModels.size,
+            widths: selections.widths.size,
+          })
+        );
       }
       if (selections.colors.size) {
         const colors = sortColors(
-          Array.from(selections.colors).map((entry) => entry.split("|").slice(1).join("|"))
+          Array.from(selections.colors).map((entry) => entry.split("|").slice(-1)[0])
         );
         add("color", fmt(formats.colorList, { value: colors.map(colorLabel).join(joiner) }));
       }
@@ -1602,6 +1751,124 @@
       .join("");
   }
 
+  function renderWidthStyleStepSingle() {
+    const groups = singleGroupsData();
+    if (!groups.length) return `<p class="group-empty">${esc(CFG.options?.noPrereq || "")}</p>`;
+
+    return groups
+      .map(({ series, seriesRecords }) => {
+        const models = uniqueBy(
+          seriesRecords.filter((record) =>
+            selections.models.has(key(record.s, record.m))
+          ),
+          (record) => record.m
+        );
+        if (!models.length) {
+          return `<p class="group-empty">${esc(CFG.options?.noModel || "")}</p>`;
+        }
+
+        const modelCards = models
+          .map((modelRecord) => {
+            const model = modelRecord.m;
+            const modelRecords = seriesRecords.filter(
+              (record) => record.m === model
+            );
+            const pending = modelRecords.some((record) => Boolean(record.flag));
+            const widths = Array.from(
+              new Set(modelRecords.map((record) => record.w))
+            ).sort((a, b) => Number(a) - Number(b));
+            const widthOptions = widths.map((width) =>
+              optionMarkup({
+                kind: "width",
+                value: singleWidthValue(series, model, width),
+                title: fmt(CFG.options?.width, { value: width }),
+              })
+            );
+            const widthRows = modelRecords.filter(hasSingleWidth);
+            const styleRows = widthRows;
+            const styleHeightGroups = uniqueBy(styleRows, (record) => record.hg);
+            const styleOptions = widthRows.length ? styleHeightGroups.flatMap((record) =>
+              heightsOf(record.hg).map((option) => {
+                const short =
+                  option.kind === "floor"
+                    ? CFG.options?.floorShort || "落地"
+                    : CFG.options?.standingShort || "站脚";
+                return optionMarkup({
+                  kind: "style",
+                  value: singleStyleValue(series, model, record.hg, option.kind),
+                  title: `${short} ${option.height} mm`,
+                });
+              })
+            ) : [];
+
+            // Per-model colors & layers based on selected widths + styles
+            const forColorRows = widthRows;
+            const colorSources = forColorRows.filter((record) =>
+              heightsOf(record.hg).some((option) =>
+                hasSingleStyle(record, option.kind)
+              )
+            );
+            const colorRows = colorSources.length ? colorSources : forColorRows;
+            const colors = sortColors(new Set(colorRows.flatMap((record) => record.c)));
+            const layers = sortLayers(new Set(colorRows.flatMap((record) => layersOf(record.hg))));
+            const colorOptions = widthRows.length ? colors.map((color) =>
+              optionMarkup({
+                kind: "color",
+                value: singleColorValue(series, model, color),
+                title: colorLabel(color),
+              })
+            ) : [];
+            const layerOptions = widthRows.length ? layers.map((layer) =>
+              optionMarkup({
+                kind: "layer",
+                value: singleLayerValue(series, model, layer),
+                title: fmt(CFG.options?.layer, { value: layer }),
+              })
+            ) : [];
+
+            const emptyTip = `<div class="option-grid option-grid--compact"><p class="group-empty">${esc(CFG.options?.noWidth || "请先选择宽度")}</p></div>`;
+            return `<article class="model-spec">
+              <header class="model-spec__head">
+                <h4>${esc(model)}</h4>
+                <div class="model-spec__actions">
+                  ${pending ? `<span class="tag--warning">${esc(CFG.options?.tagPending || "")}</span>` : ""}
+                  <button class="mini-btn" type="button" data-action="select-model-all" data-select="true" data-series="${esc(series)}" data-model="${esc(model)}">${esc(CFG.options?.selectSizesAll || "")}</button>
+                  <button class="mini-btn" type="button" data-action="select-model-all" data-select="false" data-series="${esc(series)}" data-model="${esc(model)}">${esc(CFG.options?.selectSizesNone || "")}</button>
+                </div>
+              </header>
+              <div class="model-spec__row">
+                <span class="model-spec__label">${esc(CFG.catalog?.widthLabel || "宽度")}</span>
+                <div class="option-grid option-grid--compact">${widthOptions.join("")}</div>
+              </div>
+              <div class="model-spec__row">
+                <span class="model-spec__label">${esc(CFG.catalog?.styleLabel || "款式")}</span>
+                ${styleOptions.length ? `<div class="option-grid option-grid--compact">${styleOptions.join("")}</div>` : emptyTip}
+              </div>
+              <div class="model-spec__row">
+                <span class="model-spec__label">${esc(CFG.catalog?.colorLabel || "颜色")}</span>
+                ${colorOptions.length ? `<div class="option-grid option-grid--compact">${colorOptions.join("")}</div>` : emptyTip}
+              </div>
+              <div class="model-spec__row">
+                <span class="model-spec__label">${esc(CFG.options?.layerLabel || "层数")}</span>
+                ${layerOptions.length ? `<div class="option-grid option-grid--compact">${layerOptions.join("")}</div>` : emptyTip}
+              </div>
+            </article>`;
+          })
+          .join("");
+
+        return `<section class="series-group model-spec-series">
+          <header class="group-head">
+            <div class="group-head__title">
+              <span class="group-head__dot" aria-hidden="true"></span>
+              <h3>${esc(series)}</h3>
+            </div>
+          </header>
+          <div class="model-spec-list">${modelCards}</div>
+        </section>`;
+      })
+      .join("");
+  }
+
   function renderWidthStep() {
     const groups = singleGroupsData();
     if (!groups.length) return `<p class="group-empty">${esc(CFG.options?.noPrereq || "")}</p>`;
@@ -1649,7 +1916,7 @@
         const selectedRows = seriesRecords.filter(
           (record) =>
             selections.models.has(key(record.s, record.m)) &&
-            selections.widths.has(key(record.s, record.w))
+            hasSingleWidth(record)
         );
         if (!selectedRows.length) {
           return seriesGroupMarkup({
@@ -1691,93 +1958,6 @@
           options,
           skip: CFG.options?.noPrereq,
           kind: "style",
-        });
-      })
-      .join("");
-  }
-
-  function renderColorStepSingle() {
-    const groups = singleGroupsData();
-    if (!groups.length) return `<p class="group-empty">${esc(CFG.options?.noPrereq || "")}</p>`;
-
-    return groups
-      .map(({ series, seriesRecords }) => {
-        const selectedRows = seriesRecords.filter(
-          (record) =>
-            selections.models.has(key(record.s, record.m)) &&
-            selections.widths.has(key(record.s, record.w)) &&
-            heightsOf(record.hg).some((option) =>
-              selections.styles.has(key(record.s, option.height))
-            )
-        );
-        if (!selectedRows.length) {
-          return seriesGroupMarkup({
-            title: series,
-            options: [],
-            skip: CFG.options?.noPrereq,
-            kind: "color",
-          });
-        }
-
-        const colors = sortColors(new Set(selectedRows.flatMap((record) => record.c)));
-        const options = colors.map((color) =>
-          optionMarkup({
-            kind: "color",
-            value: key(series, color),
-            title: colorLabel(color),
-          })
-        );
-
-        return seriesGroupMarkup({
-          title: series,
-          options,
-          skip: CFG.options?.noPrereq,
-          kind: "color",
-          compact: true,
-        });
-      })
-      .join("");
-  }
-
-  function renderLayerStepSingle() {
-    const groups = singleGroupsData();
-    if (!groups.length) return `<p class="group-empty">${esc(CFG.options?.noPrereq || "")}</p>`;
-
-    return groups
-      .map(({ series, seriesRecords }) => {
-        const selectedRows = seriesRecords.filter(
-          (record) =>
-            selections.models.has(key(record.s, record.m)) &&
-            selections.widths.has(key(record.s, record.w)) &&
-            heightsOf(record.hg).some((option) =>
-              selections.styles.has(key(record.s, option.height))
-            ) &&
-            record.c.some((color) => selections.colors.has(key(record.s, color)))
-        );
-        if (!selectedRows.length) {
-          return seriesGroupMarkup({
-            title: series,
-            options: [],
-            skip: CFG.options?.noPrereq,
-            kind: "layer",
-          });
-        }
-
-        const layers = sortLayers(new Set(selectedRows.flatMap((record) => layersOf(record.hg))));
-        const options = layers.map((layer) =>
-          optionMarkup({
-            kind: "layer",
-            value: key(series, layer),
-            title: fmt(CFG.options?.layer, { value: layer }),
-          })
-        );
-
-        return seriesGroupMarkup({
-          title: series,
-          options,
-          skip: CFG.options?.noPrereq,
-          kind: "layer",
-          compact: true,
         });
       })
       .join("");
@@ -2524,16 +2704,16 @@
     for (const record of records) {
       if (!selections.series.has(record.s)) continue;
       if (!selections.models.has(key(record.s, record.m))) continue;
-      if (!selections.widths.has(key(record.s, record.w))) continue;
+      if (!hasSingleWidth(record)) continue;
 
       const styleOptions = heightsOf(record.hg).filter((option) =>
-        selections.styles.has(key(record.s, option.height))
+        hasSingleStyle(record, option.kind)
       );
       const colors = record.c.filter((color) =>
-        selections.colors.has(key(record.s, color))
+        hasSingleColor(record, color)
       );
       const layers = layersOf(record.hg).filter((layer) =>
-        selections.layers.has(key(record.s, layer))
+        hasSingleLayer(record, layer)
       );
 
       if (!styleOptions.length || !colors.length || !layers.length) continue;
@@ -2801,10 +2981,9 @@
     if (state.mode === "single") {
       if (step.key === "series") return renderSeriesStep();
       if (step.key === "model") return renderModelStep();
+      if (step.key === "widthStyle") return renderWidthStyleStepSingle();
       if (step.key === "width") return renderWidthStep();
       if (step.key === "style") return renderStyleStepSingle();
-      if (step.key === "color") return renderColorStepSingle();
-      if (step.key === "layer") return renderLayerStepSingle();
     } else {
       if (step.key === "series") return renderSeriesStep();
       if (step.key === "combo") return renderComboStep();
@@ -3846,6 +4025,68 @@
       }
       if (action === "select-none-group") {
         selectVisibleGroup(actionButton.dataset.kind, actionButton, false);
+        return;
+      }
+      if (action === "select-model-all") {
+        const series = actionButton.dataset.series;
+        const model = actionButton.dataset.model;
+        const shouldSelect = actionButton.dataset.select === "true";
+        const modelRecords = recordsForSeries(series).filter((record) => record.m === model);
+
+        if (shouldSelect) {
+          // 1) widths first
+          modelRecords.forEach((record) => {
+            selections.widths.add(singleWidthValue(series, model, record.w));
+          });
+          pruneSelections();
+
+          // 2) styles (computed from pruned widths state)
+          const widthRows = modelRecords.filter(hasSingleWidth);
+          widthRows.forEach((record) => {
+            heightsOf(record.hg).forEach((option) => {
+              selections.styles.add(singleStyleValue(series, model, record.hg, option.kind));
+            });
+          });
+          pruneSelections();
+
+          // 3) colors (computed from pruned width + style state)
+          const styleRows = widthRows.filter((record) =>
+            heightsOf(record.hg).some((option) => hasSingleStyle(record, option.kind))
+          );
+          styleRows.forEach((record) => {
+            record.c.forEach((color) => {
+              selections.colors.add(singleColorValue(series, model, color));
+            });
+          });
+          pruneSelections();
+
+          // 4) layers (computed from pruned width + style + color state)
+          const colorRows = styleRows.filter((record) =>
+            record.c.some((color) => hasSingleColor(record, color))
+          );
+          colorRows.forEach((record) => {
+            layersOf(record.hg).forEach((layer) => {
+              selections.layers.add(singleLayerValue(series, model, layer));
+            });
+          });
+        } else {
+          // 全不选：一次清除该门型在四套 selections 中的所有条目
+          modelRecords.forEach((record) => {
+            selections.widths.delete(singleWidthValue(series, model, record.w));
+            heightsOf(record.hg).forEach((option) => {
+              selections.styles.delete(singleStyleValue(series, model, record.hg, option.kind));
+            });
+            record.c.forEach((color) => {
+              selections.colors.delete(singleColorValue(series, model, color));
+            });
+            layersOf(record.hg).forEach((layer) => {
+              selections.layers.delete(singleLayerValue(series, model, layer));
+            });
+          });
+        }
+        pruneSelections();
+        state.pulse = "";
+        render({ preserveScroll: true });
         return;
       }
       if (

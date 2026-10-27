@@ -1340,6 +1340,123 @@ html[data-theme="dark"] .segmented__thumb {
   transform: translateY(-50%) scale(1.06);
 }
 
+.model-spec-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.model-spec {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.model-spec__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.model-spec__head h4 {
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.model-spec__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.model-spec__actions .mini-btn {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 11.5px;
+}
+
+.model-spec__row + .model-spec__row {
+  margin-top: 9px;
+}
+
+.model-spec__label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.model-spec .option-grid {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.model-spec .option-grid--compact .option {
+  min-height: 42px;
+  padding: 7px 31px 7px 9px;
+  border-radius: 9px;
+}
+
+.model-spec .option-grid--compact .option__title {
+  font-size: 13px;
+}
+
+.model-spec .option-grid--compact .option__check {
+  right: 9px;
+  width: 17px;
+  height: 17px;
+}
+
+.spec-extra {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.spec-extra--empty {
+  display: block;
+}
+
+.spec-extra .option-grid {
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+}
+
+.spec-extra .option-grid--compact .option {
+  min-height: 42px;
+  padding: 7px 31px 7px 9px;
+  border-radius: 9px;
+}
+
+.spec-extra .option-grid--compact .option__title {
+  font-size: 13px;
+}
+
+.spec-extra .option-grid--compact .option__check {
+  right: 9px;
+  width: 17px;
+  height: 17px;
+}
+
+@media (max-width: 640px) {
+  .model-spec-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 .option-grid--compact .option.is-picked .option__check {
   animation: compact-check-pop 0.42s var(--ease-spring);
 }
