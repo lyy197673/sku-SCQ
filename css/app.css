@@ -1528,6 +1528,62 @@ html[data-theme="dark"] .segmented__thumb {
   margin-bottom: 10px;
 }
 
+.combo-bulk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.combo-bulk__copy {
+  min-width: 0;
+}
+
+.combo-bulk__copy strong {
+  display: block;
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.combo-bulk__copy p {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.combo-bulk__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.combo-bulk__btn {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 10.5px;
+}
+
+.combo-bulk__btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.combo-bulk__btn.is-ready {
+  border-color: var(--accent-line);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 650;
+}
+
 .combo-list {
   display: flex;
   flex-direction: column;
@@ -3851,6 +3907,21 @@ html[data-theme="dark"] .pill--floor {
     font-size: 8px;
   }
 
+  .combo-bulk {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .combo-bulk__actions {
+    width: 100%;
+  }
+
+  .combo-bulk__btn {
+    flex: 1;
+    justify-content: center;
+  }
+
   .combo-card {
     padding: 8px 9px;
     border-radius: 0;
@@ -5739,6 +5810,93 @@ html[data-theme="dark"] .pill--floor {
 
   .combo-preview-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Readability pass
+   -------------------------------------------------------------------------- */
+
+.steps-panel__label {
+  font-size: 9.5px;
+}
+
+.steps-panel__count,
+.step__meta {
+  font-size: 11px;
+}
+
+.step-kicker {
+  font-size: 10px;
+}
+
+.mode-panel__caption {
+  font-size: 11.5px;
+}
+
+.group-head h3 {
+  font-size: 15px;
+}
+
+.mini-btn {
+  height: 32px;
+  font-size: 12px;
+}
+
+.mini-btn:disabled {
+  opacity: 0.5;
+}
+
+.combo-card__title {
+  font-size: 13.5px;
+}
+
+.combo-picker-trigger {
+  font-size: 12.5px;
+}
+
+.combo-style-inline {
+  font-size: 11px;
+}
+
+.combo-bulk__copy strong {
+  font-size: 13.5px;
+}
+
+.combo-bulk__copy p {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.combo-bulk__btn {
+  height: 32px;
+  font-size: 12px;
+}
+
+.combo-bulk__btn:disabled {
+  opacity: 0.55;
+}
+
+.catalog-card__size {
+  font-size: 12px;
+}
+
+.catalog-card__series {
+  font-size: 11.5px;
+}
+
+.catalog-color,
+.catalog-card__flag {
+  font-size: 10.5px;
+}
+
+@media (max-width: 640px) {
+  .group-head h3 {
+    font-size: 14px;
+  }
+
+  .combo-bulk__copy p {
+    font-size: 11.5px;
   }
 }
 

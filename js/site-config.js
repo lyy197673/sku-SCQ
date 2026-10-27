@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T05:28:13.846Z",
+  "updatedAt": "2026-10-27T08:02:01.769Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -245,7 +245,16 @@ window.SITE_CONFIG = {
     "pickerModeBack": "返回款式",
     "pickerModeStandDesc": "有柜腿，含腿总高",
     "pickerModeFloorDesc": "落地款，总高",
-    "removeCabinet": "移除这个柜体"
+    "removeCabinet": "移除这个柜体",
+    "cloneStand": "复制为站脚柜",
+    "cloneFloor": "复制为落地柜",
+    "cloneStandDone": "已复制 {count} 个组合为站脚版",
+    "cloneFloorDone": "已复制 {count} 个组合为落地版",
+    "cloneNone": "没有需要复制的组合",
+    "cloneBulkTitle": "批量复制为站脚/落地",
+    "cloneBulkHint": "先在下面勾选组合，再一键复制成站脚或者落地款；柜体、门型和宽度保持不变。",
+    "cloneSelectFirst": "先勾选需要复制的组合",
+    "cloneAlready": "所选组合已经是该款式"
   },
   "result": {
     "kicker": "RESULT",

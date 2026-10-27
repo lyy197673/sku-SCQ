@@ -1822,7 +1822,25 @@
     const cards = groups
       .map((series) => {
         const seriesGroups = comboConfigs[series] || [];
-        const selectedCount = seriesGroups.filter((group) => group.selected).length;
+        const selectedGroups = seriesGroups.filter((group) => group.selected);
+        const selectedCount = selectedGroups.length;
+        const canClone = (targetMode) =>
+          selectedGroups.some((group) =>
+            group.items
+              .filter(Boolean)
+              .some(
+                (value) =>
+                  comboItemSelection(value, series).parsed.mode !== targetMode
+              )
+          );
+        const canCloneStand = canClone("stand");
+        const canCloneFloor = canClone("floor");
+        const cloneHint = (canCloneTarget) =>
+          !selectedCount
+            ? CFG.combo?.cloneSelectFirst || ""
+            : canCloneTarget
+              ? CFG.combo?.cloneBulkHint || ""
+              : CFG.combo?.cloneAlready || "";
         const comboRows = seriesGroups
           .map((group, groupIndex) => {
             const validItems = group.items.filter(Boolean);
@@ -1871,6 +1889,16 @@
               <button class="mini-btn" type="button" data-action="add-combo" data-combo-series="${esc(series)}">${esc(CFG.combo?.addGroup || "")}</button>
             </div>
           </header>
+          <div class="combo-bulk">
+            <div class="combo-bulk__copy">
+              <strong>${esc(CFG.combo?.cloneBulkTitle || "")}</strong>
+              <p>${esc(CFG.combo?.cloneBulkHint || "")}</p>
+            </div>
+            <div class="combo-bulk__actions">
+              <button class="mini-btn combo-bulk__btn${canCloneStand ? " is-ready" : ""}" type="button" data-action="clone-mode" data-clone-mode="stand" data-combo-series="${esc(series)}" ${canCloneStand ? "" : "disabled"} title="${esc(cloneHint(canCloneStand))}">${esc(CFG.combo?.cloneStand || "")}</button>
+              <button class="mini-btn combo-bulk__btn${canCloneFloor ? " is-ready" : ""}" type="button" data-action="clone-mode" data-clone-mode="floor" data-combo-series="${esc(series)}" ${canCloneFloor ? "" : "disabled"} title="${esc(cloneHint(canCloneFloor))}">${esc(CFG.combo?.cloneFloor || "")}</button>
+            </div>
+          </div>
           <div class="combo-list">${comboRows}</div>
         </section>`;
       })
@@ -3620,6 +3648,50 @@
       }
       return;
     }
+    if (action === "clone-mode") {
+      const targetMode = target.dataset.cloneMode === "floor" ? "floor" : "stand";
+      const sourceGroups = groups.filter((group) => group.selected);
+      if (!sourceGroups.length) {
+        showToast(CFG.combo?.cloneSelectFirst || "");
+        return;
+      }
+      const copies = [];
+      sourceGroups.forEach((group) => {
+        const filled = group.items.filter(Boolean);
+        if (!filled.length) return;
+        const allTarget = filled.every(
+          (value) => comboItemSelection(value, series).parsed.mode === targetMode
+        );
+        if (allTarget) return;
+        const items = group.items.map((value) => {
+          if (!value) return "";
+          const selection = comboItemSelection(value, series);
+          if (!selection.record) return "";
+          return encodeComboItem({
+            ...selection.parsed,
+            heightGroup: selection.record.hg,
+            mode: targetMode,
+          });
+        });
+        if (items.some(Boolean)) copies.push({ items, selected: false });
+      });
+      if (!copies.length) {
+        showToast(CFG.combo?.cloneNone || "");
+        return;
+      }
+      groups.push(...copies);
+      sourceGroups.forEach((group) => {
+        group.selected = false;
+      });
+      showToast(
+        fmt(
+          targetMode === "floor"
+            ? CFG.combo?.cloneFloorDone
+            : CFG.combo?.cloneStandDone,
+          { count: copies.length }
+        )
+      );
+    }
     if (action === "preview-combo") {
       openComboPreview(series, groupIndex);
       return;
@@ -3781,6 +3853,7 @@
         action === "add-combo-item" ||
         action === "copy-combo" ||
         action === "remove-combo-item" ||
+        action === "clone-mode" ||
         action === "preview-combo" ||
         action === "delete-combo" ||
         action === "batch-copy"
