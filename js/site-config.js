@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-26T02:08:25.701Z",
+  "updatedAt": "2026-10-27T02:49:26.468Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -27,7 +27,8 @@ window.SITE_CONFIG = {
     "themeLight": "切换为浅色外观",
     "themeDark": "切换为深色外观",
     "skip": "跳到主要内容",
-    "progress": "PROGRESS"
+    "progress": "PROGRESS",
+    "catalog": "产品画册"
   },
   "hero": {
     "eyebrow": "CABINET / SKU",
@@ -230,7 +231,13 @@ window.SITE_CONFIG = {
     "pickerWidth": "{value} mm",
     "pickerClear": "清除选择",
     "pickerClose": "关闭选择",
-    "pickerEmpty": "暂无可选柜体"
+    "pickerEmpty": "暂无可选柜体",
+    "preview": "组合效果预览",
+    "previewHint": "点击放大查看",
+    "previewTitle": "组合效果预览",
+    "previewEmpty": "请先选择柜体",
+    "previewNote": "示意图，实际颜色与款式以最终清单为准。",
+    "livePreview": "实时预览"
   },
   "result": {
     "kicker": "RESULT",
@@ -340,17 +347,34 @@ window.SITE_CONFIG = {
   "announcements": [
     {
       "id": "03187b7b-84a8-4b03-ab5f-9e580a774bea",
-      "title": "sku生成器重磅升级",
-      "body": "ui升级、体验升级、新增混搭组合柜系列！",
-      "badge": "公告",
-      "tone": "info",
+      "title": "网站又双叒叕更新了！",
+      "body": "微调了一下界面，另外右上角新增【产品画册】功能（简笔画）\n组合柜新增【组合效果实时预览】功能，更直观（自己先看看丑不丑）",
+      "badge": "升级",
+      "tone": "success",
       "pinned": false,
       "active": true,
       "dismissible": true,
-      "publishedAt": "2026-10-25T04:48:00.000Z",
+      "publishedAt": "2026-10-27T02:42:00.000Z",
       "expiresAt": "",
       "linkText": "",
       "linkHref": ""
     }
-  ]
+  ],
+  "catalog": {
+    "kicker": "PRODUCT CATALOG",
+    "title": "产品画册",
+    "subtitle": "查看全部柜体线稿，支持分类、搜索、宽度和颜色筛选。",
+    "searchPlaceholder": "搜索系列、门型、宽度或颜色…",
+    "allSeries": "全部",
+    "styleLabel": "款式",
+    "stand": "站脚款",
+    "floor": "落地款",
+    "widthLabel": "宽度",
+    "allWidths": "全部宽度",
+    "colorLabel": "颜色",
+    "allColors": "全部颜色",
+    "count": "{count} 款柜体",
+    "empty": "没有找到匹配的柜体",
+    "viewLarge": "查看大图"
+  }
 };

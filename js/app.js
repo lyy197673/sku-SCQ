@@ -29,6 +29,9 @@
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13M10 11v5M14 11v5"></path></svg>',
     chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>',
     cabinet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M4 11h16M12 3v18M8.5 7h.01M15.5 15h.01"></path></svg>',
+    book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v15H6.5A2.5 2.5 0 0 0 4 21.5v-15Z"></path><path d="M4 19a2 2 0 0 1 2-2h14M8 8h8M8 12h6"></path></svg>',
+    eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4.2-4.2"></path></svg>',
     alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5"></path><path d="M12 17h.01"></path></svg>',
   };
 
@@ -38,6 +41,15 @@
     pulse: "",
     lastResult: null,
   };
+
+  const catalogState = {
+    series: "all",
+    floor: false,
+    width: "all",
+    color: "all",
+    query: "",
+  };
+  let comboPreviewState = null;
 
   const selections = {
     series: new Set(),
@@ -68,6 +80,7 @@
   let modalReturnFocus = null;
   let dismissStorage = null;
   let lastMetricSignature = "";
+  let svgUid = 0;
   let activeComboPicker = null;
   let pickerKeyListener = null;
   let pickerResizeListener = null;
@@ -692,9 +705,13 @@
     ui.brandName.textContent = CFG.brand?.name || "";
     ui.brandTagline.textContent = CFG.brand?.tagline || "";
 
+    ui.catalogLabel.textContent = CFG.nav?.catalog || "";
+    ui.comboPreviewPanelTitle.textContent = CFG.combo?.livePreview || "";
+    ui.comboPreviewPanelHint.textContent = CFG.combo?.previewHint || "";
     ui.announcementLabel.textContent = CFG.nav?.announcements || "";
     ui.helpLabel.textContent = CFG.nav?.help || "";
     ui.progressLabel.textContent = CFG.nav?.progress || "";
+    ui.catalogButton.setAttribute("aria-label", CFG.nav?.catalog || "");
     ui.announcementButton.setAttribute("aria-label", CFG.nav?.announcements || "");
     ui.helpButton.setAttribute("aria-label", CFG.nav?.help || "");
     ui.heroEyebrow.textContent = CFG.hero?.eyebrow || "";
@@ -808,6 +825,500 @@
       $$(".metric__value", ui.heroMetrics).forEach((element) => element.classList.add("is-updating"));
     }
     lastMetricSignature = signature;
+  }
+
+    function createCabinetSVG(item, isFloor, showDimensions = true, options = {}) {
+      const padding = options.padding ?? (showDimensions ? 80 : 20);
+      // 落地款的总高度等于柜身高度，站脚款是总高度
+      const currentH = isFloor ? item.hb : item.h;
+      
+      const vbW = item.w + padding * 2;
+      const vbH = currentH + padding * 2;
+      const ox = padding;
+      const oy = padding;
+      const T = 20;            
+      const legW = 20;         
+      const legH = isFloor ? 0 : (item.h - item.hb); 
+      const LINE = "#1e293b";
+      const SOFT = "#64748b";
+      const SW = 2;
+      const baseMargin = 50;
+      const handleR = 10;
+      const handleInset = 24;
+
+      const uid = `s${svgUid++}`;
+
+      let svg = `<svg viewBox="0 0 ${vbW} ${vbH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
+
+      // 1. 四腿 (如果是落地款则不画)
+      if (!isFloor) {
+        svg += `
+          <rect x="${ox}" y="${oy + item.hb}" width="${legW}" height="${legH}" fill="none" stroke="${LINE}" stroke-width="${SW}"/>
+          <rect x="${ox + item.w - legW}" y="${oy + item.hb}" width="${legW}" height="${legH}" fill="none" stroke="${LINE}" stroke-width="${SW}"/>
+          <rect x="${ox}" y="${oy + item.h - 8}" width="${legW}" height="8" fill="${LINE}"/>
+          <rect x="${ox + item.w - legW}" y="${oy + item.h - 8}" width="${legW}" height="8" fill="${LINE}"/>
+        `;
+      }
+
+      // 2. 外框
+      svg += `
+        <rect x="${ox}" y="${oy}" width="${item.w}" height="${item.hb}" fill="none" stroke="${LINE}" stroke-width="${SW}"/>
+        <rect x="${ox + T}" y="${oy + T}" width="${item.w - 2*T}" height="${item.hb - 2*T}" fill="none" stroke="${LINE}" stroke-width="1.5"/>
+      `;
+
+      const innerX = ox + T;
+      let innerY = oy + T;
+      const innerW = item.w - 2 * T;
+      let innerH = item.hb - 2 * T;
+
+      // 3 & 4. 柜体内部区域
+      if (item.type === "drawers_only") {
+        // 纯抽屉柜全铺逻辑
+        const drawerH = innerH / item.drawers;
+        for (let i = 0; i < item.drawers; i++) {
+          const dy = innerY + i * drawerH;
+          svg += `<rect x="${innerX + 2}" y="${dy + 2}" width="${innerW - 4}" height="${drawerH - 4}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+          // 拉手
+          svg += `<circle cx="${innerX + innerW / 2}" cy="${dy + drawerH / 2}" r="${handleR}" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+        }
+      } else {
+        // 带门柜子逻辑
+        // 3. 顶部横向抽屉区
+        if (item.drawers > 0) {
+          const drawerH = 160;
+          const dw = innerW / item.drawers;
+          for (let d = 0; d < item.drawers; d++) {
+            const dx = innerX + d * dw;
+            svg += `<rect x="${dx + 2}" y="${innerY + 2}" width="${dw - 4}" height="${drawerH - 4}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+            svg += `<circle cx="${dx + dw / 2}" cy="${innerY + drawerH / 2}" r="${handleR}" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+          }
+          innerY += drawerH;
+          svg += `<rect x="${innerX}" y="${innerY}" width="${innerW}" height="${T}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+          innerY += T;
+          innerH -= (drawerH + T);
+        }
+
+        // 4. 门板区
+        if (item.type === "tier3") {
+          const th = innerH / 3;
+          for (let i = 0; i < 3; i++) {
+            const ty = innerY + i * th;
+            svg += `<rect x="${innerX + 2}" y="${ty + 2}" width="${innerW - 4}" height="${th - 4}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+            svg += `<circle cx="${innerX + handleInset}" cy="${ty + th / 2}" r="${handleR}" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+          }
+        } else if (item.type === "goose") {
+          // 鹅颈门线框渲染
+          const gap = 4;           
+          const lipW = 13;         
+          const grooveW = 7.5;     
+          const slopeW = 18;       
+          const bevelH = 6;        
+
+          const dTop = innerY + 2;
+          const dBot = innerY + innerH - 2;
+
+          const doorW = (innerW - (item.doors - 1) * gap) / item.doors;
+
+          for (let i = 0; i < item.doors; i++) {
+            const dLeft = innerX + i * (doorW + gap);
+            const dRight = dLeft + doorW;
+
+            let handleOnRight = true;
+            if (item.doors === 1) {
+              handleOnRight = true;
+            } else if (item.doors === 2) {
+              handleOnRight = (i === 0);
+            } else if (item.doors === 3) {
+              handleOnRight = (i === 0);
+            } else if (item.doors === 4) {
+              handleOnRight = (i % 2 === 0);
+            }
+
+            if (handleOnRight) {
+              const xLip = dRight - lipW;
+              const xGroove = xLip - grooveW;
+              const xSlope = xGroove - slopeW;
+
+              const doorPath = `
+                M ${dLeft} ${dTop}
+                L ${xSlope} ${dTop}
+                L ${xGroove} ${dTop + bevelH}
+                L ${xLip} ${dTop + bevelH}
+                L ${xLip} ${dTop}
+                L ${dRight} ${dTop}
+                L ${dRight} ${dBot}
+                L ${xLip} ${dBot}
+                L ${xLip} ${dBot - bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                L ${xSlope} ${dBot}
+                L ${dLeft} ${dBot}
+                Z
+              `;
+              svg += `<path d="${doorPath}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+
+              const slopePath = `
+                M ${xSlope} ${dTop}
+                L ${xGroove} ${dTop + bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                L ${xSlope} ${dBot}
+                Z
+              `;
+              svg += `<path d="${slopePath}" fill="none" stroke="${SOFT}" stroke-width="1"/>`;
+
+              const groovePath = `
+                M ${xGroove} ${dTop + bevelH}
+                L ${xLip} ${dTop + bevelH}
+                L ${xLip} ${dBot - bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                Z
+              `;
+              svg += `<path d="${groovePath}" fill="none" stroke="${LINE}" stroke-width="2.5"/>`;
+
+              svg += `<line x1="${xSlope}" y1="${dTop}" x2="${xSlope}" y2="${dBot}" stroke="${LINE}" stroke-width="1.5"/>`;
+
+            } else {
+              const xLip = dLeft + lipW;
+              const xGroove = xLip + grooveW;
+              const xSlope = xGroove + slopeW;
+
+              const doorPath = `
+                M ${dRight} ${dTop}
+                L ${xSlope} ${dTop}
+                L ${xGroove} ${dTop + bevelH}
+                L ${xLip} ${dTop + bevelH}
+                L ${xLip} ${dTop}
+                L ${dLeft} ${dTop}
+                L ${dLeft} ${dBot}
+                L ${xLip} ${dBot}
+                L ${xLip} ${dBot - bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                L ${xSlope} ${dBot}
+                L ${dRight} ${dBot}
+                Z
+              `;
+              svg += `<path d="${doorPath}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+
+              const slopePath = `
+                M ${xSlope} ${dTop}
+                L ${xGroove} ${dTop + bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                L ${xSlope} ${dBot}
+                Z
+              `;
+              svg += `<path d="${slopePath}" fill="none" stroke="${SOFT}" stroke-width="1"/>`;
+
+              const groovePath = `
+                M ${xGroove} ${dTop + bevelH}
+                L ${xLip} ${dTop + bevelH}
+                L ${xLip} ${dBot - bevelH}
+                L ${xGroove} ${dBot - bevelH}
+                Z
+              `;
+              svg += `<path d="${groovePath}" fill="none" stroke="${LINE}" stroke-width="2.5"/>`;
+
+              svg += `<line x1="${xSlope}" y1="${dTop}" x2="${xSlope}" y2="${dBot}" stroke="${LINE}" stroke-width="1.5"/>`;
+            }
+          }
+        } else {
+          // 其他常规门型
+          const doorW = innerW / item.doors;
+          for (let i = 0; i < item.doors; i++) {
+            const dx = innerX + i * doorW;
+            svg += `<rect x="${dx + 2}" y="${innerY + 2}" width="${doorW - 4}" height="${innerH - 4}" rx="1" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+
+            const currentMargin = (item.type === "plum") ? 40 : baseMargin;
+            const pw = doorW - currentMargin * 2;
+            const ph = innerH - currentMargin * 2;
+            const px = dx + currentMargin;
+            const py = innerY + currentMargin;
+
+            if (pw > 0 && ph > 0) {
+              const clipId = `${uid}_clip_${i}`;
+              const capRadius = Math.min(pw, ph) / 2;
+
+              if (["grille", "rattan", "plum"].includes(item.type)) {
+                const rxAttr = item.type === "rattan" ? `rx="${capRadius}"` : "";
+                svg += `<defs><clipPath id="${clipId}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" ${rxAttr}/></clipPath></defs>`;
+              }
+
+              if (item.type === "circle") {
+                svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${capRadius}" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+              } else if (item.type === "arch") {
+                const r = pw / 2;
+                svg += `<path d="M ${px} ${py + ph} L ${px} ${py + r} A ${r} ${r} 0 0 1 ${px + pw} ${py + r} L ${px + pw} ${py + ph} Z" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+              } else if (item.type === "grille") {
+                svg += `<g clip-path="url(#${clipId})">`;
+                const step = 33;
+                const linesCount = Math.max(1, Math.floor(ph / step));
+                const startY = py + (ph - (linesCount - 1) * step) / 2;
+                for (let k = 0; k < linesCount; k++) {
+                  const y = startY + k * step;
+                  svg += `<line x1="${px}" y1="${y}" x2="${px + pw}" y2="${y}" stroke="${SOFT}" stroke-width="1.2"/>`;
+                }
+                svg += `</g>`;
+                svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+              } else if (item.type === "rattan") {
+                // 纯线条六角藤编纹理
+                const patternId = `rattan_pat_${uid}_${i}`;
+                svg += `<defs>
+                  <pattern id="${patternId}" width="34.64" height="30" patternUnits="userSpaceOnUse" patternTransform="scale(0.8)">
+                    <line x1="0" y1="15" x2="34.64" y2="15" stroke="${SOFT}" stroke-width="4" stroke-linecap="round"/>
+                    <line x1="0" y1="15" x2="34.64" y2="15" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="8.66" y1="0" x2="25.98" y2="30" stroke="${SOFT}" stroke-width="4" stroke-linecap="round"/>
+                    <line x1="8.66" y1="0" x2="25.98" y2="30" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="25.98" y1="0" x2="8.66" y2="30" stroke="${SOFT}" stroke-width="4" stroke-linecap="round"/>
+                    <line x1="25.98" y1="0" x2="8.66" y2="30" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+                  </pattern>
+                </defs>`;
+                svg += `<g clip-path="url(#${clipId})">`;
+                svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="url(#${patternId})"/>`;
+                svg += `</g>`;
+                svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${capRadius}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+              } else if (item.type === "plum") {
+                svg += `<g clip-path="url(#${clipId})">`;
+                const step = 36;
+                for (let yy = py + 22; yy < py + ph; yy += step) {
+                  for (let xx = px + 22; xx < px + pw; xx += step) {
+                    for (let a = 0; a < 5; a++) {
+                      const ang = -Math.PI / 2 + a * Math.PI * 2 / 5;
+                      const cx2 = (xx + Math.cos(ang) * 4).toFixed(1);
+                      const cy2 = (yy + Math.sin(ang) * 4).toFixed(1);
+                      svg += `<circle cx="${cx2}" cy="${cy2}" r="2.4" fill="none" stroke="${SOFT}" stroke-width="0.9"/>`;
+                    }
+                    svg += `<circle cx="${xx}" cy="${yy}" r="1.4" fill="none" stroke="${SOFT}" stroke-width="0.8"/>`;
+                  }
+                }
+                svg += `</g>`;
+              } else if (item.type === "square_emboss") {
+                const bevel2 = 16;
+                const innerPx = px + bevel2;
+                const innerPy = py + bevel2;
+                const innerPw = pw - 2 * bevel2;
+                const innerPh = ph - 2 * bevel2;
+
+                svg += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+                svg += `<rect x="${innerPx}" y="${innerPy}" width="${innerPw}" height="${innerPh}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+                svg += `<path d="M ${px} ${py} L ${innerPx} ${innerPy} M ${px + pw} ${py} L ${innerPx + innerPw} ${innerPy} M ${px} ${py + ph} L ${innerPx} ${innerPy + innerPh} M ${px + pw} ${py + ph} L ${innerPx + innerPw} ${innerPy + innerPh}" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+              } else if (item.type === "arch_emboss") {
+                const bevel2 = 16;
+                const r = pw / 2;
+                const rIn = r - bevel2;
+
+                svg += `<path d="M ${px} ${py + ph} L ${px} ${py + r} A ${r} ${r} 0 0 1 ${px + pw} ${py + r} L ${px + pw} ${py + ph} Z" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+                svg += `<path d="M ${px + bevel2} ${py + ph - bevel2} L ${px + bevel2} ${py + r} A ${rIn} ${rIn} 0 0 1 ${px + pw - bevel2} ${py + r} L ${px + pw - bevel2} ${py + ph - bevel2} Z" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
+                svg += `<line x1="${px}" y1="${py + ph}" x2="${px + bevel2}" y2="${py + ph - bevel2}" stroke="${LINE}" stroke-width="1.5"/>`;
+                svg += `<line x1="${px + pw}" y1="${py + ph}" x2="${px + pw - bevel2}" y2="${py + ph - bevel2}" stroke="${LINE}" stroke-width="1.5"/>`;
+              }
+            }
+
+            // 外装拉手（常规门）
+            const handleY = innerY + innerH / 2;
+            let handleX = 0;
+
+            if (item.doors === 1) {
+              handleX = dx + doorW - handleInset;
+            } else if (item.doors === 2) {
+              handleX = i === 0 ? dx + doorW - handleInset : dx + handleInset;
+            } else if (item.doors === 3) {
+              if (i === 0) handleX = dx + doorW - handleInset;
+              else if (i === 1) handleX = dx + handleInset;
+              else if (i === 2) handleX = dx + handleInset;
+            } else if (item.doors === 4) {
+              handleX = (i % 2 === 0) ? dx + doorW - handleInset : dx + handleInset;
+            }
+
+            svg += `<circle cx="${handleX}" cy="${handleY}" r="${handleR}" fill="none" stroke="${LINE}" stroke-width="2"/>`;
+          }
+        }
+      }
+
+      if (showDimensions) {
+      // 5. 尺寸标注
+      svg += `
+        <line x1="${ox}" y1="${oy + currentH + 24}" x2="${ox + item.w}" y2="${oy + currentH + 24}" stroke="${SOFT}" stroke-width="2"/>
+        <line x1="${ox}" y1="${oy + currentH + 14}" x2="${ox}" y2="${oy + currentH + 34}" stroke="${SOFT}" stroke-width="2"/>
+        <line x1="${ox + item.w}" y1="${oy + currentH + 14}" x2="${ox + item.w}" y2="${oy + currentH + 34}" stroke="${SOFT}" stroke-width="2"/>
+        <text x="${ox + item.w / 2}" y="${oy + currentH + 60}" font-size="32" fill="#1e293b" font-weight="bold" text-anchor="middle">宽度${item.w}mm</text>
+
+        <line x1="${ox + item.w + 24}" y1="${oy}" x2="${ox + item.w + 24}" y2="${oy + currentH}" stroke="${SOFT}" stroke-width="2"/>
+        <line x1="${ox + item.w + 14}" y1="${oy}" x2="${ox + item.w + 34}" y2="${oy}" stroke="${SOFT}" stroke-width="2"/>
+        <line x1="${ox + item.w + 14}" y1="${oy + currentH}" x2="${ox + item.w + 34}" y2="${oy + currentH}" stroke="${SOFT}" stroke-width="2"/>
+        <text x="${ox + item.w + 64}" y="${oy + currentH / 2}" font-size="32" fill="#1e293b" font-weight="bold" transform="rotate(90 ${ox + item.w + 64} ${oy + currentH / 2})" text-anchor="middle">高度${currentH}mm</text>
+      `;
+
+      }
+
+      svg += `</svg>`;
+      return svg;
+    }
+
+  const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+  let productCatalogCache = null;
+
+  function inferCabinetShape(series, model) {
+    let type = "circle";
+    if (series === "梅花系列") type = "plum";
+    else if (series === "藤编系列") type = "rattan";
+    else if (series === "格栅系列") type = "grille";
+    else if (series === "方压型系列") type = "square_emboss";
+    else if (series === "拱压型系列") type = "arch_emboss";
+    else if (series === "鹅颈门系列") type = "goose";
+
+    if (model.includes("立三门")) type = "tier3";
+    else if (type === "circle" && model.includes("拱门")) type = "arch";
+    else if (type === "circle" && model.includes("铁门")) type = "iron";
+    else if (type === "circle" && model.includes("抽") && !model.includes("门")) {
+      type = "drawers_only";
+    }
+
+    let drawers = 0;
+    const drawerMatch = model.match(/([一二三四五六])斗/);
+    if (drawerMatch) drawers = CN_NUM[drawerMatch[1]] || 0;
+    if (!drawers) {
+      const pullMatch = model.match(/([一二三四五六])抽/);
+      if (pullMatch) drawers = CN_NUM[pullMatch[1]] || 0;
+    }
+
+    let doors = 1;
+    if (type === "drawers_only") doors = 0;
+    else if (type === "tier3") doors = 1;
+    else if (model.includes("四开") || model.includes("四门")) doors = 4;
+    else if (model.includes("三开") || model.includes("三门")) doors = 3;
+    else if (model.includes("对开") || model.includes("二门")) doors = 2;
+    else doors = 1;
+
+    if (type === "drawers_only" && !drawers) drawers = 3;
+    return { type, doors, drawers };
+  }
+
+  function productFromRecord(record) {
+    const parts = heightParts(record.hg);
+    const h = parts[0] || 0;
+    const hb = parts[1] || h;
+    const shape = inferCabinetShape(record.s, record.m);
+    return {
+      key: `${record.s}|${record.m}|${record.hg}|${record.w}|${record.d}`,
+      series: record.s,
+      name: record.m,
+      hg: record.hg,
+      size: `高度${record.hg}mm · 宽度${record.w}mm · 深度${record.d}mm`,
+      w: record.w,
+      d: record.d,
+      h,
+      hb,
+      colors: record.c,
+      colorLabels: record.c.map((color) => colorLabel(color)),
+      flag: record.flag,
+      ...shape,
+    };
+  }
+
+  function productCatalogData() {
+    if (productCatalogCache) return productCatalogCache;
+    const seen = new Set();
+    const products = [];
+    for (const record of records) {
+      const product = productFromRecord(record);
+      if (seen.has(product.key)) continue;
+      seen.add(product.key);
+      products.push(product);
+    }
+    productCatalogCache = products;
+    return products;
+  }
+
+  function combinedCabinetSvg(products, isFloor, showDimensions = true) {
+    if (!products.length) return "";
+    const padding = 1;
+    const gap = 2;
+    const parsed = [];
+    for (const product of products) {
+      const markup = createCabinetSVG(product, isFloor, false, { padding });
+      const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
+      const svg = doc.documentElement;
+      const viewBox = (svg.getAttribute("viewBox") || "").split(/\s+/).map(Number);
+      if (viewBox.length !== 4 || viewBox.some((value) => !Number.isFinite(value))) continue;
+      parsed.push({
+        inner: svg.innerHTML,
+        w: viewBox[2],
+        h: viewBox[3],
+        item: product,
+      });
+    }
+    if (!parsed.length) return "";
+    const heights = parsed.map((part) => (isFloor ? part.item.hb : part.item.h));
+    const uneven = new Set(heights).size > 1;
+    const leftSpace = showDimensions && uneven ? 68 : 0;
+    const visualW = parsed.reduce((sum, part) => sum + part.w, 0) + gap * (parsed.length - 1);
+    const maxH = Math.max(...parsed.map((part) => part.h));
+    const labelSpace = showDimensions ? 56 : 0;
+    const heightSpace = showDimensions ? 70 : 0;
+    let x = leftSpace;
+    const groups = parsed
+      .map((part) => {
+        part.offset = x;
+        const y = maxH - part.h;
+        const group = `<g transform="translate(${x} ${y})">${part.inner}</g>`;
+        x += part.w + gap;
+        return group;
+      })
+      .join("");
+
+    if (!showDimensions) {
+      return `<svg viewBox="0 0 ${visualW} ${maxH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${groups}</svg>`;
+    }
+
+    const widthLabels = parsed
+      .map((part) => {
+        const x1 = part.offset + padding;
+        const x2 = part.offset + part.w - padding;
+        const y = maxH + 18;
+        return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#64748b" stroke-width="2"/>
+          <line x1="${x1}" y1="${y - 6}" x2="${x1}" y2="${y + 6}" stroke="#64748b" stroke-width="2"/>
+          <line x1="${x2}" y1="${y - 6}" x2="${x2}" y2="${y + 6}" stroke="#64748b" stroke-width="2"/>
+          <text x="${(x1 + x2) / 2}" y="${y + 29}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle">宽度${part.item.w}mm</text>`;
+      })
+      .join("");
+
+    const last = parsed[parsed.length - 1];
+    const right = last.offset + last.w - padding;
+    const labelX = right + 13;
+    const top = maxH - last.h + padding;
+    const currentH = isFloor ? last.item.hb : last.item.h;
+    const bottom = top + currentH;
+    const heightLabel = `<line x1="${labelX}" y1="${top}" x2="${labelX}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
+      <line x1="${labelX - 6}" y1="${top}" x2="${labelX + 6}" y2="${top}" stroke="#64748b" stroke-width="2"/>
+      <line x1="${labelX - 6}" y1="${bottom}" x2="${labelX + 6}" y2="${bottom}" stroke="#64748b" stroke-width="2"/>
+      <text x="${labelX + 26}" y="${(top + bottom) / 2}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle" transform="rotate(90 ${labelX + 26} ${(top + bottom) / 2})">高度${currentH}mm</text>`;
+
+    let leftHeightLabel = "";
+    if (uneven) {
+      const first = parsed[0];
+      const firstHeight = isFloor ? first.item.hb : first.item.h;
+      const firstTop = maxH - first.h + padding;
+      const firstBottom = firstTop + firstHeight;
+      const leftLabelX = leftSpace - 14;
+      const leftTextX = leftLabelX - 25;
+      leftHeightLabel = `<line x1="${leftLabelX}" y1="${firstTop}" x2="${leftLabelX}" y2="${firstBottom}" stroke="#64748b" stroke-width="2"/>
+        <line x1="${leftLabelX - 6}" y1="${firstTop}" x2="${leftLabelX + 6}" y2="${firstTop}" stroke="#64748b" stroke-width="2"/>
+        <line x1="${leftLabelX - 6}" y1="${firstBottom}" x2="${leftLabelX + 6}" y2="${firstBottom}" stroke="#64748b" stroke-width="2"/>
+        <text x="${leftTextX}" y="${(firstTop + firstBottom) / 2}" font-size="24" fill="#1e293b" font-weight="bold" text-anchor="middle" transform="rotate(90 ${leftTextX} ${(firstTop + firstBottom) / 2})">高度${firstHeight}mm</text>`;
+    }
+
+    return `<svg viewBox="0 0 ${leftSpace + visualW + heightSpace} ${maxH + labelSpace}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${groups}${leftHeightLabel}${widthLabels}${heightLabel}</svg>`;
+  }
+
+  function comboPreviewProducts(series, groupIndex) {
+    ensureComboConfigs();
+    const group = comboConfigs[series]?.[groupIndex];
+    if (!group) return [];
+    return group.items
+      .filter(Boolean)
+      .map((value) => {
+        const matches = recordsForComboItem(value, series);
+        return matches.length ? productFromRecord(matches[0]) : null;
+      })
+      .filter(Boolean);
   }
 
   function buildStepSelections() {
@@ -1279,6 +1790,7 @@
                 return `${itemIndex > 0 ? `<span class="combo-plus" aria-hidden="true">${esc(CFG.combo?.separator || "+")}</span>` : ""}${trigger}`;
               })
               .join("");
+            const previewProducts = comboPreviewProducts(series, groupIndex);
 
             return `<article class="combo-card${duplicate ? " is-duplicate" : ""}">
               <div class="combo-card__rail">
@@ -1292,6 +1804,7 @@
                 <div class="combo-card__actions">
                   ${group.items.length < 3 ? `<button class="combo-icon-btn combo-add-btn" type="button" data-action="add-combo-item" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" title="${esc(CFG.combo?.addCabinet || "")}" aria-label="${esc(CFG.combo?.addCabinet || "")}">${ICONS.plus}<span>${esc(CFG.combo?.addCabinet || "")}</span></button>` : ""}
                   <button class="combo-icon-btn" type="button" data-action="copy-combo" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" title="${esc(CFG.combo?.copyGroup || "")}" aria-label="${esc(CFG.combo?.copyGroup || "")}">${ICONS.copy}</button>
+                  <button class="combo-icon-btn combo-preview-btn" type="button" data-action="preview-combo" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" title="${esc(CFG.combo?.preview || "")}" aria-label="${esc(CFG.combo?.preview || "")}"${previewProducts.length ? "" : " disabled"}>${ICONS.eye}</button>
                   <button class="combo-icon-btn is-danger" type="button" data-action="delete-combo" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" title="${esc(CFG.combo?.deleteGroup || "")}" aria-label="${esc(CFG.combo?.deleteGroup || "")}">${ICONS.trash}</button>
                 </div>
               </div>
@@ -1330,6 +1843,47 @@
     }
 
     return `${cards}<div class="combo-status ${statusClass}">${esc(status)}</div>`;
+  }
+
+  function renderComboPreviewPanel() {
+    if (!ui.comboPreviewPanel) return;
+    const show =
+      state.mode === "combo" &&
+      currentStep()?.key === "combo" &&
+      selectedSeriesList().length > 0;
+    ui.comboPreviewPanel.hidden = !show;
+    ui.workspace.classList.toggle("is-combo-preview", show);
+    if (!show) {
+      ui.comboPreviewContainer.innerHTML = "";
+      return;
+    }
+
+    const cards = selectedSeriesList()
+      .flatMap((series) =>
+        (comboConfigs[series] || []).map((group, groupIndex) => {
+          const products = comboPreviewProducts(series, groupIndex);
+          const svg = products.length
+            ? combinedCabinetSvg(products, false, false)
+            : "";
+          const names = products
+            .map((product) => `${product.name} · 宽度${product.w}mm`)
+            .join(" + ");
+          return `<article class="combo-dock-card${products.length ? " has-items" : ""}">
+            <div class="combo-dock-card__head">
+              <span>${esc(fmt(CFG.combo?.groupLabel, { index: groupIndex + 1 }))}</span>
+              <span>${esc(series)}</span>
+            </div>
+            ${
+              svg
+                ? `<button class="combo-dock-card__stage" type="button" data-action="preview-combo" data-combo-series="${esc(series)}" data-group-index="${groupIndex}" aria-label="${esc(CFG.combo?.preview || "")}">${svg}</button>`
+                : `<div class="combo-dock-card__empty">${esc(CFG.combo?.previewEmpty || "")}</div>`
+            }
+            ${names ? `<p class="combo-dock-card__names">${esc(names)}</p>` : ""}
+          </article>`;
+        })
+      )
+      .join("");
+    ui.comboPreviewContainer.innerHTML = cards;
   }
 
   /* ------------------------------------------------------------------------
@@ -2060,6 +2614,7 @@
     renderStepHeader();
     ui.mainContent.innerHTML = renderMainContent();
     ui.wizardFooter.innerHTML = renderFooter();
+    renderComboPreviewPanel();
 
     if (animate) {
       ui.mainContent.classList.remove("is-enter");
@@ -2262,6 +2817,234 @@
           : ""
       }
     </article>`;
+  }
+
+  function catalogSeriesOptions() {
+    return productCatalogData().map((product) => product.series).filter((value, index, list) => list.indexOf(value) === index);
+  }
+
+  function catalogWidthOptions() {
+    return Array.from(new Set(productCatalogData().map((product) => product.w))).sort(
+      (a, b) => Number(a) - Number(b)
+    );
+  }
+
+  function catalogColorOptions() {
+    return sortColors(new Set(productCatalogData().flatMap((product) => product.colors)));
+  }
+
+  function catalogFilteredProducts() {
+    const query = catalogState.query.trim().toLowerCase();
+    return productCatalogData().filter((product) => {
+      if (catalogState.series !== "all" && product.series !== catalogState.series) return false;
+      if (catalogState.width !== "all" && String(product.w) !== String(catalogState.width)) return false;
+      if (catalogState.color !== "all" && !product.colors.includes(catalogState.color)) return false;
+      if (!query) return true;
+      return [
+        product.series,
+        product.name,
+        product.hg,
+        product.size,
+        String(product.w),
+        ...product.colorLabels,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }
+
+  function catalogCardMarkup(product) {
+    const height = catalogState.floor ? product.hb : product.hg;
+    const size = `高度${height}mm · 宽度${product.w}mm · 深度${product.d}mm`;
+    const colors = product.colorLabels
+      .map((label) => `<span class="catalog-color">${esc(label)}</span>`)
+      .join("");
+    return `<article class="catalog-card">
+      <button class="catalog-card__art" type="button" data-catalog-product="${esc(product.key)}" aria-label="${esc(CFG.catalog?.viewLarge || "")}：${esc(product.name)}">
+        ${createCabinetSVG(product, catalogState.floor, true)}
+        <span class="catalog-card__zoom">${esc(CFG.catalog?.viewLarge || "")}</span>
+      </button>
+      <div class="catalog-card__body">
+        <div class="catalog-card__top">
+          <h3>${esc(product.name)}</h3>
+          ${product.flag ? `<span class="catalog-card__flag">${esc(CFG.result?.pending || "")}</span>` : ""}
+        </div>
+        <p class="catalog-card__series">${esc(product.series)}</p>
+        <p class="catalog-card__size">${esc(size)}</p>
+        <div class="catalog-card__colors">${colors}</div>
+      </div>
+    </article>`;
+  }
+
+  function renderProductCatalogGrid() {
+    if (!ui.modalLayer) return;
+    const grid = $("#catalogGrid", ui.modalLayer);
+    const count = $("#catalogCount", ui.modalLayer);
+    if (!grid) return;
+    const products = catalogFilteredProducts();
+    grid.innerHTML = products.length
+      ? products.map(catalogCardMarkup).join("")
+      : `<div class="catalog-empty"><h3>${esc(CFG.catalog?.empty || "")}</h3></div>`;
+    if (count) {
+      count.textContent = fmt(CFG.catalog?.count || "{count}", { count: products.length });
+    }
+  }
+
+  function openCatalogZoom(productKey) {
+    const product = productCatalogData().find((item) => item.key === productKey);
+    if (!product || !ui.modalLayer) return;
+    closeCatalogZoom();
+    const modal = $(".modal--catalog", ui.modalLayer);
+    if (!modal) return;
+    const height = catalogState.floor ? product.hb : product.hg;
+    const size = `高度${height}mm · 宽度${product.w}mm · 深度${product.d}mm`;
+    modal.insertAdjacentHTML(
+      "beforeend",
+      `<div class="catalog-zoom" role="dialog" aria-modal="true" aria-label="${esc(product.name)}">
+        <button class="catalog-zoom__close" type="button" data-close-catalog-zoom aria-label="${esc(CFG.common?.close || "")}">${ICONS.close}</button>
+        <div class="catalog-zoom__stage">${createCabinetSVG(product, catalogState.floor, true)}</div>
+        <div class="catalog-zoom__meta">
+          <div>
+            <p class="catalog-zoom__series">${esc(product.series)}</p>
+            <h3>${esc(product.name)}</h3>
+            <p class="catalog-zoom__size">${esc(size)}</p>
+          </div>
+          <div class="catalog-card__colors">${product.colorLabels
+            .map((label) => `<span class="catalog-color">${esc(label)}</span>`)
+            .join("")}</div>
+        </div>
+      </div>`
+    );
+  }
+
+  function closeCatalogZoom() {
+    $$(".catalog-zoom", ui.modalLayer).forEach((element) => element.remove());
+  }
+
+  function openProductCatalog() {
+    const categories = catalogSeriesOptions();
+    if (catalogState.series !== "all" && !categories.includes(catalogState.series)) {
+      catalogState.series = "all";
+    }
+    const widths = catalogWidthOptions();
+    if (catalogState.width !== "all" && !widths.map(String).includes(String(catalogState.width))) {
+      catalogState.width = "all";
+    }
+    const colors = catalogColorOptions();
+    if (catalogState.color !== "all" && !colors.includes(catalogState.color)) {
+      catalogState.color = "all";
+    }
+
+    const categoryChips = [
+      `<button class="catalog-chip${catalogState.series === "all" ? " is-active" : ""}" type="button" data-catalog-series="all">${esc(CFG.catalog?.allSeries || "")}</button>`,
+      ...categories.map(
+        (series) =>
+          `<button class="catalog-chip${catalogState.series === series ? " is-active" : ""}" type="button" data-catalog-series="${esc(series)}">${esc(series)}</button>`
+      ),
+    ].join("");
+
+    const widthOptions = [
+      `<option value="all">${esc(CFG.catalog?.allWidths || "")}</option>`,
+      ...widths.map(
+        (width) =>
+          `<option value="${width}"${String(catalogState.width) === String(width) ? " selected" : ""}>宽度${width}mm</option>`
+      ),
+    ].join("");
+
+    const colorOptions = [
+      `<option value="all">${esc(CFG.catalog?.allColors || "")}</option>`,
+      ...colors.map(
+        (color) =>
+          `<option value="${esc(color)}"${catalogState.color === color ? " selected" : ""}>${esc(colorLabel(color))}</option>`
+      ),
+    ].join("");
+
+    openModal(`<div class="modal modal--catalog" role="dialog" aria-modal="true" aria-labelledby="catalogTitle" tabindex="-1">
+      <button class="modal__close" type="button" data-close-modal aria-label="${esc(CFG.common?.close || "")}">${ICONS.close}</button>
+      <div class="catalog-modal__head">
+        <p class="modal__eyebrow">${esc(CFG.catalog?.kicker || "")}</p>
+        <h2 class="modal__title" id="catalogTitle">${esc(CFG.catalog?.title || "")}</h2>
+        <p class="modal__lead">${esc(CFG.catalog?.subtitle || "")}</p>
+      </div>
+      <div class="catalog-controls">
+        <label class="catalog-search">
+          ${ICONS.search}
+          <input id="catalogSearchInput" type="search" value="${esc(catalogState.query)}" placeholder="${esc(CFG.catalog?.searchPlaceholder || "")}" autocomplete="off">
+        </label>
+        <div class="catalog-style-switch" role="group" aria-label="${esc(CFG.catalog?.styleLabel || "")}">
+          <button class="${catalogState.floor ? "" : "is-active"}" type="button" data-catalog-style="stand">${esc(CFG.catalog?.stand || "")}</button>
+          <button class="${catalogState.floor ? "is-active" : ""}" type="button" data-catalog-style="floor">${esc(CFG.catalog?.floor || "")}</button>
+        </div>
+      </div>
+      <div class="catalog-filters">
+        <div class="catalog-categories">${categoryChips}</div>
+        <label class="catalog-select"><span>${esc(CFG.catalog?.widthLabel || "")}</span><select id="catalogWidthFilter">${widthOptions}</select></label>
+        <label class="catalog-select"><span>${esc(CFG.catalog?.colorLabel || "")}</span><select id="catalogColorFilter">${colorOptions}</select></label>
+        <span class="catalog-count" id="catalogCount"></span>
+      </div>
+      <div class="catalog-modal__scroll">
+        <div class="catalog-grid" id="catalogGrid"></div>
+      </div>
+    </div>`);
+    renderProductCatalogGrid();
+  }
+
+  function openComboPreview(series, groupIndex) {
+    const products = comboPreviewProducts(series, groupIndex);
+    if (!products.length) {
+      showToast(CFG.combo?.previewEmpty || "");
+      return;
+    }
+    comboPreviewState = { series, groupIndex, floor: false };
+    renderComboPreviewModal();
+  }
+
+  function renderComboPreviewModal() {
+    if (!comboPreviewState) return;
+    const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
+    if (!products.length) return;
+    const stage = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    const legend = products
+      .map(
+        (product, index) => `<div class="combo-preview-item">
+          <span class="combo-preview-item__index">${index + 1}</span>
+          <div>
+            <strong>${esc(product.name)}</strong>
+            <span>${esc(product.series)} · 宽度${product.w}mm · ${esc(product.colorLabels.join(CFG.result?.colorJoiner || "、"))}</span>
+          </div>
+        </div>`
+      )
+      .join("");
+
+    openModal(`<div class="modal modal--combo-preview" role="dialog" aria-modal="true" aria-labelledby="comboPreviewTitle" tabindex="-1">
+      <button class="modal__close" type="button" data-close-modal aria-label="${esc(CFG.common?.close || "")}">${ICONS.close}</button>
+      <div class="modal__header">
+        <p class="modal__eyebrow">${esc(CFG.combo?.preview || "")}</p>
+        <h2 class="modal__title" id="comboPreviewTitle">${esc(CFG.combo?.previewTitle || "")}</h2>
+        <p class="modal__lead">${esc(CFG.combo?.previewNote || "")}</p>
+      </div>
+      <div class="combo-preview-switch">
+        <button class="${comboPreviewState.floor ? "" : "is-active"}" type="button" data-combo-preview-style="stand">${esc(CFG.catalog?.stand || "")}</button>
+        <button class="${comboPreviewState.floor ? "is-active" : ""}" type="button" data-combo-preview-style="floor">${esc(CFG.catalog?.floor || "")}</button>
+      </div>
+      <div class="modal__scroll combo-preview-scroll">
+        <div class="combo-preview-stage" id="comboPreviewStage">${stage}</div>
+        <div class="combo-preview-list">${legend}</div>
+      </div>
+    </div>`);
+  }
+
+  function refreshComboPreview() {
+    if (!comboPreviewState) return;
+    const products = comboPreviewProducts(comboPreviewState.series, comboPreviewState.groupIndex);
+    if (!products.length) return;
+    const stage = $("#comboPreviewStage", ui.modalLayer);
+    if (stage) stage.innerHTML = combinedCabinetSvg(products, comboPreviewState.floor, true);
+    $$("[data-combo-preview-style]", ui.modalLayer).forEach((button) => {
+      const active = (button.dataset.comboPreviewStyle === "floor") === comboPreviewState.floor;
+      button.classList.toggle("is-active", active);
+    });
   }
 
   function openAnnouncements() {
@@ -2547,6 +3330,10 @@
     const groups = comboConfigs[series];
     if (!Array.isArray(groups)) return;
 
+    if (action === "preview-combo") {
+      openComboPreview(series, groupIndex);
+      return;
+    }
     if (action === "add-combo") {
       groups.push({ items: ["", ""], selected: false });
     } else if (action === "add-combo-item") {
@@ -2588,6 +3375,53 @@
     const pickerTrigger = event.target.closest("[data-combo-picker]");
     if (pickerTrigger) {
       openComboPicker(pickerTrigger);
+      return;
+    }
+
+    const catalogProduct = event.target.closest("[data-catalog-product]");
+    if (catalogProduct) {
+      openCatalogZoom(catalogProduct.dataset.catalogProduct || "");
+      return;
+    }
+
+    if (
+      event.target.closest("[data-close-catalog-zoom]") ||
+      event.target.classList.contains("catalog-zoom")
+    ) {
+      closeCatalogZoom();
+      return;
+    }
+
+    const catalogSeriesButton = event.target.closest("[data-catalog-series]");
+    if (catalogSeriesButton) {
+      catalogState.series = catalogSeriesButton.dataset.catalogSeries || "all";
+      $$("[data-catalog-series]", ui.modalLayer).forEach((button) => {
+        button.classList.toggle(
+          "is-active",
+          button.dataset.catalogSeries === catalogState.series
+        );
+      });
+      renderProductCatalogGrid();
+      return;
+    }
+
+    const catalogStyleButton = event.target.closest("[data-catalog-style]");
+    if (catalogStyleButton) {
+      catalogState.floor = catalogStyleButton.dataset.catalogStyle === "floor";
+      $$("[data-catalog-style]", ui.modalLayer).forEach((button) => {
+        button.classList.toggle(
+          "is-active",
+          (button.dataset.catalogStyle === "floor") === catalogState.floor
+        );
+      });
+      renderProductCatalogGrid();
+      return;
+    }
+
+    const comboStyleButton = event.target.closest("[data-combo-preview-style]");
+    if (comboStyleButton && comboPreviewState) {
+      comboPreviewState.floor = comboStyleButton.dataset.comboPreviewStyle === "floor";
+      refreshComboPreview();
       return;
     }
 
@@ -2663,6 +3497,7 @@
         action === "add-combo" ||
         action === "add-combo-item" ||
         action === "copy-combo" ||
+        action === "preview-combo" ||
         action === "delete-combo" ||
         action === "batch-copy"
       ) {
@@ -2708,7 +3543,24 @@
     }
   }
 
+  function onDocumentInput(event) {
+    if (event.target.id === "catalogSearchInput") {
+      catalogState.query = event.target.value;
+      renderProductCatalogGrid();
+    }
+  }
+
   function onDocumentChange(event) {
+    if (event.target.id === "catalogWidthFilter") {
+      catalogState.width = event.target.value;
+      renderProductCatalogGrid();
+      return;
+    }
+    if (event.target.id === "catalogColorFilter") {
+      catalogState.color = event.target.value;
+      renderProductCatalogGrid();
+      return;
+    }
     const checkbox = event.target.closest(".combo-check-input");
     if (checkbox) {
       const series = checkbox.dataset.comboSeries;
@@ -2728,6 +3580,8 @@
   function bindEvents() {
     document.addEventListener("click", onDocumentClick);
     document.addEventListener("change", onDocumentChange);
+    document.addEventListener("input", onDocumentInput);
+    ui.catalogButton.addEventListener("click", openProductCatalog);
     ui.announcementButton.addEventListener("click", openAnnouncements);
     ui.helpButton.addEventListener("click", openHelp);
     ui.themeToggle.addEventListener("click", toggleTheme);
@@ -2753,6 +3607,10 @@
       if (!ui.modalLayer.classList.contains("is-open")) return;
       if (event.key === "Escape") {
         event.preventDefault();
+        if ($(".catalog-zoom", ui.modalLayer)) {
+          closeCatalogZoom();
+          return;
+        }
         closeModal();
         return;
       }
@@ -2771,6 +3629,8 @@
       brandMark: $("#brandMark"),
       brandName: $("#brandName"),
       brandTagline: $("#brandTagline"),
+      catalogButton: $("#catalogButton"),
+      catalogLabel: $("#catalogLabel"),
       announcementButton: $("#announcementButton"),
       announcementLabel: $("#announcementLabel"),
       noticeDot: $("#noticeDot"),
@@ -2787,8 +3647,13 @@
       progressLabel: $("#progressLabel"),
       stepCount: $("#stepCount"),
       steps: $("#steps"),
+      workspace: $(".workspace"),
       workbench: $(".workbench"),
       wizard: $("#wizard"),
+      comboPreviewPanel: $("#comboPreviewPanel"),
+      comboPreviewContainer: $("#comboPreviewContainer"),
+      comboPreviewPanelTitle: $("#comboPreviewPanelTitle"),
+      comboPreviewPanelHint: $("#comboPreviewPanelHint"),
       progressFill: $("#progressFill"),
       stepKicker: $("#stepKicker"),
       stepTitle: $("#stepTitle"),
