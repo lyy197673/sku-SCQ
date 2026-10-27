@@ -2008,7 +2008,7 @@
                   data-picker-width
                   data-picker-value="${esc(value)}"
                   aria-pressed="${selected}"
-                >${esc(widthEntry.width)} mm · ${esc(widthEntry.height)}</button>`;
+                >高${esc(widthEntry.height)}mm*宽${esc(widthEntry.width)}mm</button>`;
               })
               .join("");
 
