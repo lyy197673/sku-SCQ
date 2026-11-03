@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-27T08:22:15.945Z",
+  "updatedAt": "2026-11-03T09:59:01.156Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,

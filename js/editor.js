@@ -613,6 +613,7 @@
       depth: String(row?.[4] ?? ""),
       colors: Array.from(String(row?.[5] ?? "")).filter(Boolean),
       flag: String(row?.[6] ?? ""),
+      layers: String(row?.[7] ?? ""),
     }));
   }
 
@@ -625,6 +626,7 @@
       Number(item.depth),
       [...new Set(item.colors || [])].join(""),
       String(item.flag || "").trim(),
+      String(item.layers || "").trim(),
     ]);
   }
 
@@ -1357,6 +1359,13 @@
       if (!Array.isArray(item.colors) || !item.colors.length) {
         addError("colors", "至少选择一种颜色");
       }
+      const layersStr = String(item.layers || "").trim();
+      if (layersStr) {
+        const tokens = layersStr.split(/[/,\s]+/).filter(Boolean);
+        if (!tokens.length || tokens.some((t) => !/^\d+$/.test(t) || Number(t) <= 0)) {
+          addError("layers", "层数必须是正整数，用斜杠或逗号分隔，例如 3/4/5");
+        }
+      }
     });
     return { errors, keys };
   }
@@ -1409,6 +1418,10 @@
       <div class="spec-row__field spec-row__field--colors">
         <span class="spec-label">颜色</span>
         <div class="color-chips" aria-label="颜色">${colorButtons}</div>
+      </div>
+      <div class="spec-row__field spec-row__field--layers">
+        <span class="spec-label">层数</span>
+        <input class="spec-input${catalogFieldError(item, "layers") ? " is-invalid" : ""}" type="text" data-catalog-field="layers" data-uid="${esc(item.uid)}" value="${esc(item.layers)}" placeholder="如 3/4/5" aria-label="层数（斜杠分隔，留空自动）">
       </div>
       <div class="spec-row__field spec-row__field--flag">${input("flag", "备注")}</div>
       <div class="spec-row__actions">
@@ -1464,7 +1477,7 @@
               <div class="catalog-model__body" ${isOpen ? "" : "hidden"}>
                 <div class="spec-table">
                   <div class="spec-table__head" aria-hidden="true">
-                    <span>站脚高度</span><span>落地高度</span><span>宽度</span><span>深度</span><span>颜色</span><span>备注</span><span></span>
+                    <span>站脚高度</span><span>落地高度</span><span>宽度</span><span>深度</span><span>颜色</span><span>层数</span><span>备注</span><span></span>
                   </div>
                   ${model.items.map(catalogRowMarkup).join("")}
                 </div>

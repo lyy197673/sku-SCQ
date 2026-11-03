@@ -286,12 +286,13 @@
       const depth = Number(row[4]) || 350;
       const colors = String(row[5] ?? "").split("").filter((part) => part.trim());
       const flag = String(row[6] ?? "").trim();
+      const layers = String(row[7] ?? "").trim();
 
       if (!series || !model || !heightGroup || !Number.isFinite(width) || width <= 0 || !colors.length) {
         continue;
       }
 
-      records.push({ s: series, m: model, hg: heightGroup, w: width, d: depth, c: colors, flag });
+      records.push({ s: series, m: model, hg: heightGroup, w: width, d: depth, c: colors, flag, layers });
       if (!seriesSeen.has(series)) {
         seriesSeen.add(series);
         seriesList.push(series);
@@ -325,15 +326,18 @@
     return [makeOption(parts[0], parts[0] <= 870 ? "floor" : "stand")];
   }
 
-  // 个别门型的层数单独限制（键为门型名，值为允许的层数）
-  const MODEL_LAYER_LIMITS = {
-    "立三门": [3],
-  };
-
-  function layersOf(heightGroup, model) {
-    const override = model ? MODEL_LAYER_LIMITS[model] : null;
-    if (override) return override.slice();
-    const first = heightParts(heightGroup)[0];
+  function layersOf(record) {
+    // 优先用该行规格上的层数配置（格式："3/4/5" 斜杠分隔）
+    const layersField = String(record?.layers ?? "").trim();
+    if (layersField) {
+      const parsed = layersField
+        .split(/[/,\s]+/)
+        .map((part) => Number(String(part).trim()))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (parsed.length) return parsed;
+    }
+    // fallback：按高度组推断（1320 → [4,5]，其余 → [3,4,5]）
+    const first = heightParts(record?.hg)[0];
     return first === 1320 ? [4, 5] : [3, 4, 5];
   }
 
@@ -505,7 +509,7 @@
       let groupLayers = null;
       for (const record of info.records) {
         const recordColors = new Set(record.c);
-        const recordLayers = new Set(layersOf(record.hg, record.m));
+        const recordLayers = new Set(layersOf(record));
         groupColors = groupColors
           ? intersectSet(groupColors, recordColors)
           : recordColors;
@@ -660,7 +664,7 @@
         );
         const colorSource = selectedColorRows.length ? selectedColorRows : styleSource;
         colorSource.forEach((record) => {
-          layersOf(record.hg, record.m).forEach((layer) => {
+          layersOf(record).forEach((layer) => {
             allowedLayers.add(singleLayerValue(record.s, record.m, layer));
           });
         });
@@ -734,7 +738,7 @@
           hasSingleColor({ s: series, m: model }, color)
         );
         if (!hasColor) return false;
-        const layers = new Set(rows.flatMap((record) => layersOf(record.hg, record.m)));
+        const layers = new Set(rows.flatMap((record) => layersOf(record)));
         const hasLayer = Array.from(layers).some((layer) =>
           hasSingleLayer({ s: series, m: model }, layer)
         );
@@ -1817,7 +1821,7 @@
             );
             const colorRows = colorSources.length ? colorSources : forColorRows;
             const colors = sortColors(new Set(colorRows.flatMap((record) => record.c)));
-            const layers = sortLayers(new Set(colorRows.flatMap((record) => layersOf(record.hg, record.m))));
+            const layers = sortLayers(new Set(colorRows.flatMap((record) => layersOf(record))));
             const colorOptions = widthRows.length ? colors.map((color) =>
               optionMarkup({
                 kind: "color",
@@ -2719,7 +2723,7 @@
       const colors = record.c.filter((color) =>
         hasSingleColor(record, color)
       );
-      const layers = layersOf(record.hg, record.m).filter((layer) =>
+      const layers = layersOf(record).filter((layer) =>
         hasSingleLayer(record, layer)
       );
 
@@ -4072,7 +4076,7 @@
             record.c.some((color) => hasSingleColor(record, color))
           );
           colorRows.forEach((record) => {
-            layersOf(record.hg, record.m).forEach((layer) => {
+            layersOf(record).forEach((layer) => {
               selections.layers.add(singleLayerValue(series, model, layer));
             });
           });
@@ -4086,7 +4090,7 @@
             record.c.forEach((color) => {
               selections.colors.delete(singleColorValue(series, model, color));
             });
-            layersOf(record.hg, record.m).forEach((layer) => {
+            layersOf(record).forEach((layer) => {
               selections.layers.delete(singleLayerValue(series, model, layer));
             });
           });

@@ -210,6 +210,20 @@ function validateCatalog(catalog) {
     if (typeof flag !== "string") {
       throw new HttpError(422, `第 ${line} 行备注必须是文本。`);
     }
+    // 第 8 列：层数（可选，斜杠/逗号/空格分隔的正整数列表，如 "3/4/5"）
+    const layers = row[7];
+    if (layers != null && layers !== "") {
+      if (typeof layers !== "string") {
+        throw new HttpError(422, `第 ${line} 行层数必须是文本（如 "3/4/5"）。`);
+      }
+      const tokens = String(layers).split(/[/,\s]+/).filter(Boolean);
+      for (const token of tokens) {
+        const num = Number(token);
+        if (!Number.isFinite(num) || !Number.isInteger(num) || num <= 0) {
+          throw new HttpError(422, `第 ${line} 行层数包含无效值 "${token}"，应为正整数。`);
+        }
+      }
+    }
   });
 
   return true;
@@ -220,7 +234,8 @@ function renderCatalogSource(catalog) {
   return [
     "/* 餐边柜 SKU 类目数据",
     " * 由可视化编辑器写入；也可直接修改此文件。",
-    " * 字段：[系列, 门型, 高度组, 宽度mm, 深度mm, 颜色, 备注]",
+    " * 字段：[系列, 门型, 高度组, 宽度mm, 深度mm, 颜色, 备注, 层数]",
+    " *   层数格式：斜杠或逗号分隔，如 \"3/4/5\"。留空时按高度组自动推断。",
     " */",
     "window.SKU_CATALOG = [",
     lines.join("\n"),
