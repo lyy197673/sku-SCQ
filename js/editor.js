@@ -614,6 +614,7 @@
       colors: Array.from(String(row?.[5] ?? "")).filter(Boolean),
       flag: String(row?.[6] ?? ""),
       layers: String(row?.[7] ?? ""),
+      kind: String(row?.[8] ?? ""),
     }));
   }
 
@@ -627,6 +628,7 @@
       [...new Set(item.colors || [])].join(""),
       String(item.flag || "").trim(),
       String(item.layers || "").trim(),
+      String(item.kind || "").trim(),
     ]);
   }
 
@@ -1324,6 +1326,8 @@
       depth: "350",
       colors: codes.slice(0, 2),
       flag: "",
+      layers: "",
+      kind: "",
     };
   }
 
@@ -1365,6 +1369,10 @@
         if (!tokens.length || tokens.some((t) => !/^\d+$/.test(t) || Number(t) <= 0)) {
           addError("layers", "层数必须是正整数，用斜杠或逗号分隔，例如 3/4/5");
         }
+      }
+      const kindStr = String(item.kind || "").trim();
+      if (kindStr && kindStr !== "drawer" && kindStr !== "door") {
+        addError("kind", "柜体类型只能是开门柜或抽屉柜");
       }
     });
     return { errors, keys };
@@ -1463,6 +1471,9 @@
             const modelKey = catalogModelKey(group.series, model.model);
             const isOpen = state.openModels.has(modelKey);
             const modelColors = new Set(model.items.flatMap((item) => item.colors)).size;
+            const modelKind = model.items.some((item) => String(item.kind).trim() === "drawer")
+              ? "drawer"
+              : "door";
             return `<article class="model-block${isOpen ? "" : " is-collapsed"}" data-search="${esc(rowSearch)}" data-model-key="${esc(modelKey)}">
               <div class="model-head">
                 <button class="catalog-model__toggle" type="button" data-catalog-action="toggle-model" aria-expanded="${isOpen}" title="${isOpen ? "收起尺寸" : "展开尺寸"}" aria-label="${isOpen ? "收起尺寸" : "展开尺寸"}">${ICONS.chevronRight}</button>
@@ -1473,6 +1484,10 @@
                 </label>
                 <span class="model-count">${model.items.length} 条尺寸 · ${modelColors} 种颜色</span>
                 <span class="model-spacer"></span>
+                <div class="model-kind" role="group" aria-label="柜体类型">
+                  <button class="model-kind__btn${modelKind === "door" ? " is-active" : ""}" type="button" data-catalog-action="set-kind" data-kind="door" data-series="${esc(group.series)}" data-model="${esc(model.model)}" title="开门柜：有层板，参与层数选择">开门柜</button>
+                  <button class="model-kind__btn${modelKind === "drawer" ? " is-active" : ""}" type="button" data-catalog-action="set-kind" data-kind="drawer" data-series="${esc(group.series)}" data-model="${esc(model.model)}" title="抽屉柜：没有层板，不参与层数选择">抽屉柜</button>
+                </div>
               </div>
               <div class="catalog-model__body" ${isOpen ? "" : "hidden"}>
                 <div class="spec-table">
@@ -1709,6 +1724,26 @@
       block.querySelector(".catalog-model__body").hidden = open;
       target.setAttribute("aria-expanded", String(!open));
       target.setAttribute("aria-label", open ? "展开尺寸" : "收起尺寸");
+      return;
+    }
+
+    if (action === "set-kind") {
+      const series = target.dataset.series || "";
+      const model = target.dataset.model || "";
+      const nextKind = target.dataset.kind === "drawer" ? "drawer" : "";
+      if (!series || !model) return;
+      let changed = false;
+      state.catalog.forEach((item) => {
+        if (item.series !== series || item.model !== model) return;
+        if (String(item.kind || "") !== nextKind) {
+          item.kind = nextKind;
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      state.catalogErrors.clear();
+      markVisualDirty();
+      renderCatalogSection();
       return;
     }
 

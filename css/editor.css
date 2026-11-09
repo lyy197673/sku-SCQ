@@ -2203,6 +2203,53 @@ body[data-pane="preview"] .pane-switch [data-pane="preview"] {
   flex: 1;
 }
 
+/* 门型柜体类型开关：开门柜 / 抽屉柜 */
+.model-kind {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--studio-surface-soft);
+  border: 1px solid var(--hairline);
+}
+
+.model-kind__btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.model-kind__btn:hover {
+  color: var(--text-strong);
+}
+
+.model-kind__btn.is-active {
+  background: var(--studio-surface);
+  color: var(--text-strong);
+  font-weight: 600;
+  box-shadow: var(--inset-highlight), 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.model-kind__btn.is-active[data-kind="drawer"] {
+  color: var(--accent);
+}
+
+@media (max-width: 780px) {
+  .model-kind {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .model-kind__btn {
+    flex: 1;
+  }
+}
+
 .catalog-model__body {
   padding: 0 11px 11px;
 }

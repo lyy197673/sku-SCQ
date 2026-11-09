@@ -287,12 +287,13 @@
       const colors = String(row[5] ?? "").split("").filter((part) => part.trim());
       const flag = String(row[6] ?? "").trim();
       const layers = String(row[7] ?? "").trim();
+      const kind = String(row[8] ?? "").trim();
 
       if (!series || !model || !heightGroup || !Number.isFinite(width) || width <= 0 || !colors.length) {
         continue;
       }
 
-      records.push({ s: series, m: model, hg: heightGroup, w: width, d: depth, c: colors, flag, layers });
+      records.push({ s: series, m: model, hg: heightGroup, w: width, d: depth, c: colors, flag, layers, kind });
       if (!seriesSeen.has(series)) {
         seriesSeen.add(series);
         seriesList.push(series);
@@ -326,7 +327,13 @@
     return [makeOption(parts[0], parts[0] <= 870 ? "floor" : "stand")];
   }
 
+  function isDrawer(record) {
+    return String(record?.kind ?? "").trim() === "drawer";
+  }
+
   function layersOf(record) {
+    // 抽屉柜没有层板，不参与层数选项
+    if (isDrawer(record)) return [];
     // 优先用该行规格上的层数配置（格式："3/4/5" 斜杠分隔）
     const layersField = String(record?.layers ?? "").trim();
     if (layersField) {
@@ -509,10 +516,13 @@
       let groupLayers = null;
       for (const record of info.records) {
         const recordColors = new Set(record.c);
-        const recordLayers = new Set(layersOf(record));
         groupColors = groupColors
           ? intersectSet(groupColors, recordColors)
           : recordColors;
+        // 抽屉柜没有层板，不参与层数交集
+        if (isDrawer(record)) continue;
+        const recordLayers = new Set(layersOf(record));
+        if (!recordLayers.size) continue;
         groupLayers = groupLayers
           ? intersectSet(groupLayers, recordLayers)
           : recordLayers;
@@ -738,7 +748,10 @@
           hasSingleColor({ s: series, m: model }, color)
         );
         if (!hasColor) return false;
-        const layers = new Set(rows.flatMap((record) => layersOf(record)));
+        // 抽屉柜没有层板，跳过层数检查
+        const doorRows = rows.filter((record) => !isDrawer(record));
+        if (!doorRows.length) continue;
+        const layers = new Set(doorRows.flatMap((record) => layersOf(record)));
         const hasLayer = Array.from(layers).some((layer) =>
           hasSingleLayer({ s: series, m: model }, layer)
         );
@@ -766,7 +779,8 @@
       case "color":
         return selections.colors.size > 0;
       case "layer":
-        return selections.layers.size > 0;
+        // 组合全是抽屉柜时没有层数可选，此时本步骤视为无需选择
+        return selections.layers.size > 0 || getComboContext().layers.length === 0;
       case "combo": {
         const { validGroups, duplicateKeys } = getComboStatus();
         return validGroups.length > 0 && duplicateKeys.size === 0;
@@ -1785,6 +1799,7 @@
               (record) => record.m === model
             );
             const pending = modelRecords.some((record) => Boolean(record.flag));
+            const drawerModel = modelRecords.every((record) => isDrawer(record));
             const widths = Array.from(
               new Set(modelRecords.map((record) => record.w))
             ).sort((a, b) => Number(a) - Number(b));
@@ -1859,10 +1874,10 @@
                 <span class="model-spec__label">${esc(CFG.catalog?.colorLabel || "颜色")}</span>
                 ${colorOptions.length ? `<div class="option-grid option-grid--compact">${colorOptions.join("")}</div>` : emptyTip}
               </div>
-              <div class="model-spec__row">
+              ${drawerModel ? "" : `<div class="model-spec__row">
                 <span class="model-spec__label">${esc(CFG.options?.layerLabel || "层数")}</span>
                 ${layerOptions.length ? `<div class="option-grid option-grid--compact">${layerOptions.join("")}</div>` : emptyTip}
-              </div>
+              </div>`}
             </article>`;
           })
           .join("");
@@ -2723,13 +2738,14 @@
       const colors = record.c.filter((color) =>
         hasSingleColor(record, color)
       );
+      const drawer = isDrawer(record);
       const layers = layersOf(record).filter((layer) =>
         hasSingleLayer(record, layer)
       );
 
-      if (!styleOptions.length || !colors.length || !layers.length) continue;
+      if (!styleOptions.length || !colors.length || (!drawer && !layers.length)) continue;
 
-      total += styleOptions.length * colors.length * layers.length;
+      total += styleOptions.length * colors.length * (drawer ? 1 : layers.length);
       modelKeys.add(key(record.s, record.m));
 
       const specMap = groupsMap.get(record.s);
@@ -2828,7 +2844,8 @@
         modelKeys.add(key(selection.record.s, selection.record.m))
       );
 
-      total += selectedColors.length * selectedLayers.length;
+      // 组合里没有开门柜时（全是抽屉柜）层数视为 1 种"无层数"规格
+      total += selectedColors.length * Math.max(1, selectedLayers.length);
       if (!groupMap.has(info.s)) groupMap.set(info.s, []);
 
       const itemDetails = selectionsForGroup.map((selection) => {

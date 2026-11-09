@@ -224,6 +224,13 @@ function validateCatalog(catalog) {
         }
       }
     }
+    // 第 9 列：柜体类型（可选，空 = 开门柜；"drawer" = 抽屉柜）
+    const kind = row[8];
+    if (kind != null && kind !== "") {
+      if (kind !== "drawer" && kind !== "door") {
+        throw new HttpError(422, `第 ${line} 行柜体类型只能是空、drawer（抽屉柜）或 door（开门柜）。`);
+      }
+    }
   });
 
   return true;
@@ -234,8 +241,9 @@ function renderCatalogSource(catalog) {
   return [
     "/* 餐边柜 SKU 类目数据",
     " * 由可视化编辑器写入；也可直接修改此文件。",
-    " * 字段：[系列, 门型, 高度组, 宽度mm, 深度mm, 颜色, 备注, 层数]",
+    " * 字段：[系列, 门型, 高度组, 宽度mm, 深度mm, 颜色, 备注, 层数, 柜体类型]",
     " *   层数格式：斜杠或逗号分隔，如 \"3/4/5\"。留空时按高度组自动推断。",
+    " *   柜体类型：留空 = 开门柜；\"drawer\" = 抽屉柜。",
     " */",
     "window.SKU_CATALOG = [",
     lines.join("\n"),

@@ -361,7 +361,7 @@ window.SITE_CONFIG = {
       "pinned": false,
       "active": true,
       "dismissible": true,
-      "publishedAt": "2026-10-27T02:42:00.000Z",
+      "publishedAt": "2026-10-27T02:42:00Z",
       "expiresAt": "",
       "linkText": "",
       "linkHref": ""
