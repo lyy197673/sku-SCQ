@@ -4,7 +4,7 @@
  */
 window.SITE_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-03T09:59:01.156Z",
+  "updatedAt": "2026-11-09T02:51:57.524Z",
   "settings": {
     "announcementBanner": true,
     "showHeroMetrics": true,
@@ -352,6 +352,20 @@ window.SITE_CONFIG = {
     "motion": true
   },
   "announcements": [
+    {
+      "id": "5b3df768-3d6c-4699-b847-f204474489e4",
+      "title": "组合抽屉柜不显示层板修复",
+      "body": "组合柜sku混合抽屉柜可以正常显示层板数了。",
+      "badge": "修复",
+      "tone": "success",
+      "pinned": false,
+      "active": true,
+      "dismissible": true,
+      "publishedAt": "2026-11-09T02:50:00.000Z",
+      "expiresAt": "",
+      "linkText": "",
+      "linkHref": ""
+    },
     {
       "id": "03187b7b-84a8-4b03-ab5f-9e580a774bea",
       "title": "网站又双叒叕更新了！",
